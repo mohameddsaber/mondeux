@@ -7,24 +7,31 @@ function Header() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
   return (
-    <header className="bg-white border-b border-gray-200">
+    
+    <header className="bg-white border-b border-gray-200 shadow-md">
+      <p className='w-full text-[12px] h-[23px] font-[Karla] bg-black text-white flex justify-center items-center'> Welcome to Mondeux We are Live</p>
       <div className="px-4 py-4">
-        <div className="flex items-center justify-between mb-6">
-          {isOpen ? (
-            <FaTimes
-              className="cursor-pointer text-xl"
-              onClick={() => setIsOpen(false)}
-            />
-          ) : (
-            <Menu
-              className="cursor-pointer text-xl"
-              onClick={() => setIsOpen(true)}
-            />
-          )}
+        <div className="grid grid-cols-3 items-center mb-4">
+          {/* Left section */}
+          <div className="flex justify-start">
+            {isOpen ? (
+              <FaTimes
+                className="cursor-pointer text-xl"
+                onClick={() => setIsOpen(false)}
+              />
+            ) : (
+              <Menu
+                className="cursor-pointer text-xl"
+                onClick={() => setIsOpen(true)}
+              />
+            )}
+          </div>
+
+          {/* Center section */}
+          <h1 className="text-2xl font-bold tracking-widest font-[Karla] text-center">MONDEUX</h1>
           
-          <h1 className="text-2xl font-bold tracking-widest font-[Karla]">MONDEUX</h1>
-          
-          <div className="flex items-center gap-2">
+          {/* Right section */}
+          <div className="flex items-center gap-2 justify-end">
             <div className="group flex items-center">
               <div className="w-0 group-hover:w-40 transition-all duration-500 ease-in-out overflow-hidden ml-2 min-w-0">
                 <input
