@@ -1,80 +1,40 @@
 import { useState, useEffect } from 'react';
 import { Minus, Plus, Lock, Leaf, ShoppingBag } from 'lucide-react';
-
-export interface CartItem {
-  id: number;
-  name: string;
-  size: string;
-  price: number;
-  quantity: number;
-  image: string;
-}
+import { 
+  type CartItem,
+  getCartItems,
+  updateCartItemQuantity,
+  removeFromCart,
+  subscribeToCart
+} from '../utils/cartManager';
 
 interface ShoppingCartPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onCartUpdate?: (count: number) => void;
-  initialItems?: CartItem[];
 }
-
-// This will be used to manage cart state globally
-let globalCartItems: CartItem[] = [];
-let globalCartListeners: ((items: CartItem[]) => void)[] = [];
-
-// Helper functions to manage cart globally
-export const addToCart = (product: Omit<CartItem, 'quantity'>, quantity: number = 1) => {
-  const existingItemIndex = globalCartItems.findIndex(item => 
-    item.id === product.id && item.size === product.size
-  );
-
-  if (existingItemIndex > -1) {
-    // Update quantity if item exists
-    globalCartItems[existingItemIndex].quantity += quantity;
-  } else {
-    // Add new item
-    globalCartItems.push({ ...product, quantity });
-  }
-
-  // Notify all listeners
-  globalCartListeners.forEach(listener => listener([...globalCartItems]));
-};
-
-export const getCartItems = () => [...globalCartItems];
-
-export const getCartCount = () => globalCartItems.reduce((sum, item) => sum + item.quantity, 0);
-
-export const clearCart = () => {
-  globalCartItems = [];
-  globalCartListeners.forEach(listener => listener([]));
-};
 
 export default function ShoppingCartPanel({ 
   isOpen, 
   onClose, 
-  onCartUpdate,
-  initialItems = []
+  onCartUpdate
 }: ShoppingCartPanelProps) {
-  const [items, setItems] = useState<CartItem[]>(initialItems);
+  const [items, setItems] = useState<CartItem[]>([]);
   const [packageProtection, setPackageProtection] = useState(true);
   const protectionPrice = 493.76;
 
-  // Subscribe to global cart changes
+  // Subscribe to cart changes
   useEffect(() => {
-    const listener = (updatedItems: CartItem[]) => {
+    // Initialize with current cart items
+    setItems(getCartItems());
+
+    // Subscribe to future changes
+    const unsubscribe = subscribeToCart((updatedItems) => {
       setItems(updatedItems);
-    };
-    globalCartListeners.push(listener);
+    });
 
-    // Initialize with global items if available
-    if (globalCartItems.length > 0) {
-      setItems([...globalCartItems]);
-    } else if (initialItems.length > 0) {
-      globalCartItems = [...initialItems];
-    }
-
-    return () => {
-      globalCartListeners = globalCartListeners.filter(l => l !== listener);
-    };
+    // Cleanup subscription on unmount
+    return unsubscribe;
   }, []);
 
   // Update parent component when cart items change
@@ -85,22 +45,12 @@ export default function ShoppingCartPanel({
     }
   }, [items, onCartUpdate]);
 
-  const updateQuantity = (id: number, size: string, delta: number) => {
-    const newItems = items.map(item => 
-      item.id === id && item.size === size
-        ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-        : item
-    );
-    setItems(newItems);
-    globalCartItems = newItems;
-    globalCartListeners.forEach(listener => listener([...newItems]));
+  const handleUpdateQuantity = (id: number, size: string, delta: number) => {
+    updateCartItemQuantity(id, size, delta);
   };
 
-  const removeItem = (id: number, size: string) => {
-    const newItems = items.filter(item => !(item.id === id && item.size === size));
-    setItems(newItems);
-    globalCartItems = newItems;
-    globalCartListeners.forEach(listener => listener([...newItems]));
+  const handleRemoveItem = (id: number, size: string) => {
+    removeFromCart(id, size);
   };
 
   const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -166,7 +116,7 @@ export default function ShoppingCartPanel({
                       </h3>
                       <p className="text-xs text-gray-600 mb-2">{item.size}</p>
                       <button 
-                        onClick={() => removeItem(item.id, item.size)}
+                        onClick={() => handleRemoveItem(item.id, item.size)}
                         className="text-xs underline hover:no-underline"
                       >
                         REMOVE
@@ -178,7 +128,7 @@ export default function ShoppingCartPanel({
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center border border-gray-300">
                       <button 
-                        onClick={() => updateQuantity(item.id, item.size, -1)}
+                        onClick={() => handleUpdateQuantity(item.id, item.size, -1)}
                         className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors"
                       >
                         <Minus size={14} />
@@ -190,7 +140,7 @@ export default function ShoppingCartPanel({
                         className="w-16 h-10 text-center border-x border-gray-300 text-sm"
                       />
                       <button 
-                        onClick={() => updateQuantity(item.id, item.size, 1)}
+                        onClick={() => handleUpdateQuantity(item.id, item.size, 1)}
                         className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors"
                       >
                         <Plus size={14} />
@@ -284,7 +234,7 @@ export default function ShoppingCartPanel({
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes slide-in {
           from {
             transform: translateX(100%);
