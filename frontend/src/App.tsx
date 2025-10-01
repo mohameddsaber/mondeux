@@ -1,7 +1,9 @@
 import { Routes, Route } from "react-router-dom"
 import Header from "./components/Header.tsx"
 import NavBar from "./components/NavBar.tsx"
-import AllProductsPage from "./pages/AllProductsPage.tsx"
+import ProductsPage from "./pages/ProductsPage.tsx"
+import HomePage from "./pages/HomePage.tsx"
+import ProductItemPage from "./pages/ProductItemPage.tsx"
 
 
 function App() {
@@ -17,9 +19,13 @@ function App() {
         <NavBar />
       </div>
 
-      <Routes >
-      <Route path="/" element={<AllProductsPage />} />
-      </Routes>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/products" element={<ProductsPage />} />
+      <Route path="products/:category" element={<ProductsPage />} />
+      <Route path="products/:category/:subcategory" element={<ProductsPage />} />
+      <Route path="products/:category/:subcategory/:productId" element={   <ProductItemPage />} />
+    </Routes>
 
 
 
