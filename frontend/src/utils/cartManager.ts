@@ -7,8 +7,31 @@ export interface CartItem {
   image: string;
 }
 
-// Global cart state
-let globalCartItems: CartItem[] = [];
+// Storage key for localStorage
+const CART_STORAGE_KEY = 'shopping_cart';
+
+// Load cart from localStorage on initialization
+const loadCartFromStorage = (): CartItem[] => {
+  try {
+    const stored = localStorage.getItem(CART_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Error loading cart from storage:', error);
+    return [];
+  }
+};
+
+// Save cart to localStorage
+const saveCartToStorage = (items: CartItem[]) => {
+  try {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  } catch (error) {
+    console.error('Error saving cart to storage:', error);
+  }
+};
+
+// Global cart state - initialize from localStorage
+let globalCartItems: CartItem[] = loadCartFromStorage();
 let globalCartListeners: ((items: CartItem[]) => void)[] = [];
 
 /**
@@ -110,5 +133,6 @@ export const initializeCart = (items: CartItem[]) => {
  * Notify all listeners of cart changes
  */
 const notifyListeners = () => {
+  saveCartToStorage(globalCartItems);
   globalCartListeners.forEach(listener => listener([...globalCartItems]));
 };
