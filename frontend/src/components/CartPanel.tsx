@@ -218,9 +218,10 @@ export default function ShoppingCartPanel({
 
             {/* Buttons */}
             <div className="space-y-3">
-              <button className="w-full py-4 bg-white border-2 border-black text-sm font-medium tracking-wider hover:bg-gray-50 transition-colors">
+              <a href="/cart"><button className="w-full py-4 bg-white border-2 border-black text-sm font-medium tracking-wider hover:bg-gray-50 transition-colors">
                 VIEW CART
               </button>
+              </a>
               <button className="w-full py-4 bg-black text-white text-sm font-medium tracking-wider hover:bg-gray-800 transition-colors">
                 CHECK OUT
               </button>
