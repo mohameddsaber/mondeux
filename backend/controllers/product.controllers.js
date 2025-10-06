@@ -3,7 +3,7 @@ import Product from '../models/product.model.js';
 import Category from '../models/category.model.js';
 import SubCategory from '../models/subCategory.model.js';
 
-// Get all products with pagination and filters
+
 export const getAllProducts = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -58,8 +58,7 @@ export const getAllProducts = async (req, res) => {
   }
 };
 
-// Get products by category - EFFICIENT APPROACH
-// YES! This automatically gets ALL products from ALL subcategories under this category
+
 export const getProductsByCategory = async (req, res) => {
   try {
     const { categorySlug } = req.params;
@@ -160,7 +159,6 @@ export const getProductsByCategory = async (req, res) => {
   }
 };
 
-// Get products by subcategory - EFFICIENT APPROACH
 export const getProductsBySubCategory = async (req, res) => {
   try {
     const { subCategorySlug } = req.params;
@@ -228,7 +226,6 @@ export const getProductsBySubCategory = async (req, res) => {
   }
 };
 
-// Get products by both category and subcategory
 export const getProductsByCategoryAndSubCategory = async (req, res) => {
   try {
     const { categorySlug, subCategorySlug } = req.params;
@@ -284,7 +281,6 @@ export const getProductsByCategoryAndSubCategory = async (req, res) => {
   }
 };
 
-// Search products
 export const searchProducts = async (req, res) => {
   try {
     const { q } = req.query;
@@ -329,9 +325,8 @@ export const searchProducts = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
-};
+}; //not tested
 
-// Get featured products
 export const getFeaturedProducts = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
@@ -352,7 +347,7 @@ export const getFeaturedProducts = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
-};
+}; //tested works
 
 // Get single product by slug
 export const getProductBySlug = async (req, res) => {
@@ -390,7 +385,8 @@ export const getProductBySlug = async (req, res) => {
   }
 };
 
-// Create product (Admin)
+
+//admin routes 
 export const createProduct = async (req, res) => {
   try {
     const product = await Product.create(req.body);
@@ -401,9 +397,8 @@ export const createProduct = async (req, res) => {
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
-};
+}; //tested works
 
-// Update product (Admin)
 export const updateProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndUpdate(
@@ -426,9 +421,8 @@ export const updateProduct = async (req, res) => {
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
-};
+}; //tested works
 
-// Delete product (Admin)
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
@@ -447,4 +441,4 @@ export const deleteProduct = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
-};
+}; // tested works
