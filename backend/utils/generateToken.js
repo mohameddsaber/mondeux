@@ -5,7 +5,7 @@ export function generateTokenAndSetCookie(userId,res) {
     res.cookie("jwt", token, 
         { 
             httpOnly: true,
-            sameSite: "Strict",
+            sameSite: "lax",
             secure: process.env.NODE_ENV === "production",
             maxAge: 10 * 24 * 60 * 60 * 1000 // 10 days
          });
