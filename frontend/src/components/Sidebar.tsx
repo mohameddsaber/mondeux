@@ -29,6 +29,28 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
       [menuName]: !prev[menuName]
     }));
   };
+  const handleLogout = async () => {
+  try {
+    const res = await fetch(`http://localhost:4000/api/users/logout`, {
+      method: "POST",
+      credentials: "include", // if using cookies
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      // You can show a toast or redirect
+      console.log("Logged out successfully");
+      window.location.href = "/login"; // optional redirect
+    } else {
+      console.error(data.message || "Logout failed");
+    }
+  } catch (error) {
+    console.error("Error logging out:", error);
+  }
+};
+
 
   return (
     <div
@@ -38,11 +60,23 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
     >
       <div className="px-10 py-7">
         {/* Close button */}
-        <div className="mb-8">
+        <div className="mb-8 flex justify-between items-center">
+          {/* Close button */}
           <button onClick={onClose} className="text-black hover:opacity-70 transition-opacity">
             <span className="text-[12px] font-[Karla] font-bold tracking-wider cursor-pointer">CLOSE</span>
           </button>
+
+          {/* Logout button */}
+          <button
+            onClick={handleLogout}
+            className="text-black hover:opacity-70 transition-opacity"
+          >
+            <span className="text-[12px] font-[Karla] font-bold tracking-wider cursor-pointer">
+              LOGOUT
+            </span>
+          </button>
         </div>
+
 
         {/* Search */}
         <div className="mb-8">
