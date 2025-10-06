@@ -1,101 +1,78 @@
 import User from '../models/user.model.js';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { generateTokenAndSetCookie } from '../utils/generateToken.js';
 
-// Generate JWT Token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d'
-  });
-};
 
-// @desc    Register new user
-// @route   POST /api/users/register
-// @access  Public
 export const register = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
 
-    // Check if user exists
     const userExists = await User.findOne({ email });
-
     if (userExists) {
       return res.status(400).json({
         success: false,
-        message: 'User already exists with this email'
+        message: "User already exists with this email",
       });
     }
 
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password,
-      phone
-    });
+    const user = await User.create({ name, email, password, phone });
 
-    if (user) {
-      res.status(201).json({
-        success: true,
-        data: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          token: generateToken(user._id)
-        }
-      });
-    }
-  } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
-  }
-};
+    generateTokenAndSetCookie(user._id, res);
 
-// @desc    Login user
-// @route   POST /api/users/login
-// @access  Public
-export const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Find user
-    const user = await User.findOne({ email }).select('+password');
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-
-    res.json({
+    res.status(201).json({
       success: true,
+      message: "User registered successfully",
       data: {
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        token: generateToken(user._id)
-      }
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// @desc    Get user profile
-// @route   GET /api/users/profile
-// @access  Private
+
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    generateTokenAndSetCookie(user._id, res);
+
+    res.json({
+      success: true,
+      message: "Logged in successfully",
+      data: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
 export const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
@@ -118,9 +95,7 @@ export const getUserProfile = async (req, res) => {
   }
 };
 
-// @desc    Update user profile
-// @route   PUT /api/users/profile
-// @access  Private
+
 export const updateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -150,7 +125,7 @@ export const updateUserProfile = async (req, res) => {
         email: updatedUser.email,
         phone: updatedUser.phone,
         role: updatedUser.role,
-        token: generateToken(updatedUser._id)
+        token: generateTokenAndSetCookie(updatedUser._id,res)
       }
     });
   } catch (error) {
@@ -158,25 +133,27 @@ export const updateUserProfile = async (req, res) => {
   }
 };
 
-// @desc    Logout user
-// @route   POST /api/users/logout
-// @access  Private
+
 export const logout = async (req, res) => {
   try {
-    // In JWT, logout is typically handled client-side by removing the token
-    // But you can implement token blacklisting here if needed
+    res.cookie("jwt", "", {
+      httpOnly: true,
+      sameSite: "Strict",
+      secure: process.env.NODE_ENV === "production",
+      expires: new Date(0) // Expire the cookie immediately
+    });
+
     res.json({
       success: true,
-      message: 'Logged out successfully'
+      message: "Logged out successfully"
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// @desc    Get user wishlist
-// @route   GET /api/users/wishlist
-// @access  Private
+
+
 export const getWishlist = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
@@ -208,9 +185,7 @@ export const getWishlist = async (req, res) => {
   }
 };
 
-// @desc    Add product to wishlist
-// @route   POST /api/users/wishlist/:productId
-// @access  Private
+
 export const addToWishlist = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -251,9 +226,7 @@ export const addToWishlist = async (req, res) => {
   }
 };
 
-// @desc    Remove product from wishlist
-// @route   DELETE /api/users/wishlist/:productId
-// @access  Private
+
 export const removeFromWishlist = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -285,9 +258,7 @@ export const removeFromWishlist = async (req, res) => {
   }
 };
 
-// @desc    Add address
-// @route   POST /api/users/addresses
-// @access  Private
+
 export const addAddress = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -301,7 +272,6 @@ export const addAddress = async (req, res) => {
 
     const { street, city, state, zipCode, country, isDefault } = req.body;
 
-    // If this is set as default, unset all other defaults
     if (isDefault) {
       user.addresses.forEach(addr => {
         addr.isDefault = false;
@@ -328,9 +298,7 @@ export const addAddress = async (req, res) => {
   }
 };
 
-// @desc    Update address
-// @route   PUT /api/users/addresses/:addressId
-// @access  Private
+
 export const updateAddress = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -378,9 +346,7 @@ export const updateAddress = async (req, res) => {
   }
 };
 
-// @desc    Delete address
-// @route   DELETE /api/users/addresses/:addressId
-// @access  Private
+
 export const deleteAddress = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -401,7 +367,7 @@ export const deleteAddress = async (req, res) => {
       });
     }
 
-    address.remove();
+    user.addresses.pull({ _id: req.params.addressId });
     await user.save();
 
     res.json({
