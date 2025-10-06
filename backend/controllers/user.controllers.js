@@ -379,9 +379,7 @@ export const deleteAddress = async (req, res) => {
   }
 };
 
-// @desc    Get all users (Admin)
-// @route   GET /api/users/admin/all
-// @access  Admin
+//admin
 export const getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -411,9 +409,7 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// @desc    Get user by ID (Admin)
-// @route   GET /api/users/admin/:id
-// @access  Admin
+
 export const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
@@ -436,9 +432,7 @@ export const getUserById = async (req, res) => {
   }
 };
 
-// @desc    Delete user (Admin)
-// @route   DELETE /api/users/admin/:id
-// @access  Admin
+
 export const deleteUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
