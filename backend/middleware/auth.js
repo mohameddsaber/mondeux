@@ -4,44 +4,36 @@ import User from '../models/user.model.js';
 
 // Protect routes - verify JWT token
 export const protect = async (req, res, next) => {
-  let token;
+  try {
+    // 1️⃣ Check if JWT cookie exists
+    const token = req.cookies.jwt;
 
-  // Check for token in headers
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    try {
-      // Get token from header
-      token = req.headers.authorization.split(' ')[1];
-
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Get user from token
-      req.user = await User.findById(decoded.id).select('-password');
-
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          message: 'User not found'
-        });
-      }
-
-      next();
-    } catch (error) {
-      console.error(error);
+    if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Not authorized, token failed'
+        message: "Not authorized, no token",
       });
     }
-  }
 
-  if (!token) {
-    return res.status(401).json({
+    // 2️⃣ Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // 3️⃣ Get user and attach to request
+    req.user = await User.findById(decoded.id).select("-password");
+
+    if (!req.user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Auth error:", error.message);
+    res.status(401).json({
       success: false,
-      message: 'Not authorized, no token'
+      message: "Not authorized, token failed",
     });
   }
 };
