@@ -1,9 +1,18 @@
-import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
 
-// Main App Component - Toggle between Login and Signup
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const mode = params.get("mode");
+
+  const [isLogin, setIsLogin] = useState(mode !== "signup");
+
+  // Sync with query param (so if user switches tabs manually)
+  useEffect(() => {
+    setIsLogin(mode !== "signup");
+  }, [mode]);
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -17,6 +26,7 @@ export default function AuthPage() {
     </div>
   );
 }
+
 
 // Login Component
 function LoginForm({ onToggle }) {

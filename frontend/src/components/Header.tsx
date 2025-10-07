@@ -33,7 +33,7 @@ function Header() {
             </div>
 
             {/* Center section */}
-            <h1 className="text-2xl font-bold tracking-widest font-[Karla] text-center">MONDEUX</h1>
+            <a href="/"><h1 className="text-2xl font-bold tracking-widest font-[Karla] text-center">MONDEUX</h1> </a>
             
             {/* Right section */}
             <div className="flex items-center gap-2 justify-end">
