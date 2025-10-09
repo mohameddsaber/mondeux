@@ -10,42 +10,107 @@ export const getAllProducts = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    // Build filter object
-    const filter = { isActive: true };
+    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : null;
+    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : null;
+    const materialFilter = req.query.material;
+
+    // --- Aggregation Pipeline Setup ---
+    const pipeline = [];
+
+    // Stage 1: Base Filter
+    const baseFilter = { isActive: true };
+    if (materialFilter) {
+      baseFilter['materialVariants.material'] = materialFilter;
+    }
+    pipeline.push({ $match: baseFilter });
+
+    // Stage 2: Extract the 'silver' variant's price
+    // We assume 'silver' is always present, so we filter the materialVariants array
+    // to find the silver object, and then take the first element (the silver variant).
+    pipeline.push({
+        $addFields: {
+            silverPrice: {
+                $arrayElemAt: [
+                    {
+                        $filter: {
+                            input: '$materialVariants',
+                            as: 'variant',
+                            cond: { $eq: ['$$variant.material', 'silver'] }
+                        }
+                    },
+                    0
+                ]
+            }
+        }
+    });
+
+    // Stage 3: Promote the price to a top-level field for easy sorting/filtering
+    pipeline.push({
+        $addFields: {
+            silverPrice: '$silverPrice.price'
+        }
+    });
+
+    // Stage 4: Apply Price Range Filter using the extracted silverPrice
+    if (minPrice || maxPrice) {
+      const priceFilter = {};
+      if (minPrice) priceFilter.$gte = minPrice;
+      if (maxPrice) priceFilter.$lte = maxPrice;
+      
+      pipeline.push({ $match: { silverPrice: priceFilter } });
+    }
+
+    // Stage 5: Sorting
+    const sortStage = {};
+    if (req.query.sort === 'price_asc') sortStage.silverPrice = 1;
+    else if (req.query.sort === 'price_desc') sortStage.silverPrice = -1;
+    else if (req.query.sort === 'newest') sortStage.createdAt = -1;
+    else if (req.query.sort === 'popular') sortStage.numReviews = -1;
+    else sortStage.createdAt = -1; 
+
+    pipeline.push({ $sort: sortStage });
     
-    // Price range filter
-    if (req.query.minPrice || req.query.maxPrice) {
-      filter.price = {};
-      if (req.query.minPrice) filter.price.$gte = parseFloat(req.query.minPrice);
-      if (req.query.maxPrice) filter.price.$lte = parseFloat(req.query.maxPrice);
-    }
+    // --- Pagination and Count ---
+    const countPipeline = [...pipeline, { $count: 'total' }];
+    const totalResult = await Product.aggregate(countPipeline);
+    const total = totalResult.length > 0 ? totalResult[0].total : 0;
+    
+    // Add pagination stages
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limit });
+    
+    // --- Manual Population (using $lookup) ---
+    // (Ensure you have Category and SubCategory models imported)
+    pipeline.push(
+        { $lookup: { from: 'categories', localField: 'category', foreignField: '_id', as: 'category' } },
+        { $unwind: '$category' },
+        { $lookup: { from: 'subcategories', localField: 'subCategory', foreignField: '_id', as: 'subCategory' } },
+        { $unwind: '$subCategory' }
+    );
 
-    // Material filter
-    if (req.query.material) {
-      filter.material = req.query.material;
-    }
+    // Stage 6: Final Projection
+    pipeline.push({ 
+        $project: { 
+            __v: 0, 
+            silverPrice: 0, // Exclude the temporary field
+            'category.description': 0, 
+            'subCategory.description': 0 
+        } 
+    });
+    
+    const products = await Product.aggregate(pipeline);
 
-    // Sort options
-    const sortOptions = {};
-    if (req.query.sort === 'price_asc') sortOptions.price = 1;
-    else if (req.query.sort === 'price_desc') sortOptions.price = -1;
-    else if (req.query.sort === 'newest') sortOptions.createdAt = -1;
-    else if (req.query.sort === 'popular') sortOptions.numReviews = -1;
-    else sortOptions.createdAt = -1;
+    // Re-map the populated category/subcategory for clean output
+    const finalProducts = products.map(p => ({
+        ...p,
+        category: { name: p.category.name, slug: p.category.slug },
+        subCategory: { name: p.subCategory.name, slug: p.subCategory.slug },
+    }));
 
-    const products = await Product.find(filter)
-      .populate('category', 'name slug')
-      .populate('subCategory', 'name slug')
-      .sort(sortOptions)
-      .limit(limit)
-      .skip(skip)
-      .select('-__v');
-
-    const total = await Product.countDocuments(filter);
 
     res.json({
       success: true,
-      data: products,
+      data: finalProducts, 
       pagination: {
         page,
         limit,
@@ -54,6 +119,7 @@ export const getAllProducts = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error("Aggregation Error in getAllProducts:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -166,7 +232,6 @@ export const getProductsBySubCategory = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    // Find subcategory and populate its parent category
     const subCategory = await SubCategory.findOne({ 
       slug: subCategorySlug, 
       isActive: true 
@@ -179,13 +244,11 @@ export const getProductsBySubCategory = async (req, res) => {
       });
     }
 
-    // Build filter with subcategory ID (indexed field - fast query!)
     const filter = { 
       subCategory: subCategory._id, 
       isActive: true 
     };
 
-    // Add additional filters
     if (req.query.minPrice || req.query.maxPrice) {
       filter.price = {};
       if (req.query.minPrice) filter.price.$gte = parseFloat(req.query.minPrice);
