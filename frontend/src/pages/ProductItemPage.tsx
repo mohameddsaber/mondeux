@@ -6,6 +6,8 @@ import ProductAccordian from '../components/ProductAccordian.tsx';
 import RelatedProducts from '../components/RelatedProducts.tsx';
 import TrustBadges from '../components/TrustBadges.tsx';
 import { type Product } from '../components/ProductCard.tsx'; 
+import { addToCart} from '../utils/cartManager.ts'; 
+
 
 export interface SizeVariant {
   label: string; 
@@ -54,13 +56,14 @@ const ProductItemPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedMaterial, setSelectedMaterial] = useState<MaterialVariant | null>(null);
+  // 🎯 FIX: Changed to store the material name string
+  const [selectedMaterialName, setSelectedMaterialName] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<SizeVariant | null>(null);
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [quantity, setQuantity] = useState(1); 
   
-  // --- Data Fetching Effect (Retained) ---
   useEffect(() => {
     if (!slug) {
       setError("Product slug is missing.");
@@ -91,12 +94,16 @@ const ProductItemPage: React.FC = () => {
         setProduct(fetchedProduct);
         setRelatedProducts(fetchedRelatedProducts);
         
-        // Initialize selected states to the first available variant
+
         if (fetchedProduct.materialVariants.length > 0) {
             const initialMaterial = fetchedProduct.materialVariants[0];
-            setSelectedMaterial(initialMaterial);
+
+            setSelectedMaterialName(initialMaterial.material); 
+
             if (initialMaterial.sizeVariants.length > 0) {
-                setSelectedSize(initialMaterial.sizeVariants[0]);
+
+              const initialSize = initialMaterial.sizeVariants.find(s => s.isAvailable && s.stock > 0) || initialMaterial.sizeVariants[0];
+                setSelectedSize(initialSize);
             }
         }
         
@@ -116,38 +123,92 @@ const ProductItemPage: React.FC = () => {
   }, [slug]);
 
 
-  const displayPrice = selectedSize?.price || selectedMaterial?.price || product?.materialVariants[0]?.price || 0;
+  const selectedMaterial = product?.materialVariants.find(
+    v => v.material === selectedMaterialName
+  ) || null;
+
+
+  const finalPrice = selectedSize?.price ?? selectedMaterial?.price ?? product?.materialVariants[0]?.price ?? 0;
+  const displayPrice = finalPrice; 
   const isAvailable = selectedSize ? selectedSize.stock > 0 : false;
   const imageUrls = product?.images.map(img => img.url) || [];
-  const selectedVariantLabel = selectedSize?.label 
-    ? `${selectedMaterial?.material.toUpperCase()} - ${selectedSize.label}`
-    : selectedMaterial?.material.toUpperCase() || 'Select Variant';
 
-  const combinedOptions = product?.materialVariants.flatMap(m => 
-    m.sizeVariants.map(s => ({
-      id: `${m.material}-${s.sku}`,
-      label: `${m.material.charAt(0).toUpperCase() + m.material.slice(1)} - ${s.label}`,
-      material: m,
+  const selectedVariantLabel = selectedSize?.label 
+    ? `${(selectedMaterialName || '').toUpperCase()} - ${selectedSize.label}`
+    : (selectedMaterialName || '').toUpperCase() || 'Select Variant';
+
+
+    const currentSizeOptions = selectedMaterial?.sizeVariants.map(s => ({
+      id: `${selectedMaterial.material}-${s.sku}`,
+      label: s.label,
+      material: selectedMaterial,
       size: s,
       isAvailable: s.isAvailable && s.stock > 0
-    }))
-  ) || [];
+  })) || [];
 
-  const handleAddToCart = () => {
-    // ... (Add to cart logic remains the same)
+
+  const handleMaterialSelect = (materialName: string) => {
+    setSelectedMaterialName(materialName); 
+    
+    const newMaterialVariant = product?.materialVariants.find(v => v.material === materialName);
+
+    if (newMaterialVariant) {
+
+      const initialSize = newMaterialVariant.sizeVariants.find(s => s.isAvailable && s.stock > 0) || newMaterialVariant.sizeVariants[0];
+        setSelectedSize(initialSize);
+
+        setIsDropdownOpen(false);
+    }
   };
 
 
-  const getProductDetails = (product: ProductDetails, selectedMaterial: MaterialVariant | null): string[] => {
-    if (!product || !selectedMaterial) return [];
+  const handleAddToCart = async () => {
+
+    if (!product || !selectedMaterial || !selectedSize || finalPrice <= 0 || !isAvailable) {
+      console.error("Cannot add to cart: Missing required variant information or item is unavailable.");
+
+      setError("Please ensure you have selected an available variant.");
+      return;
+    }
+    
+    setAddedToCart(true); 
+
+    try {
+
+      const payload = {
+        productId: product._id, 
+        size: selectedSize.label, 
+        material: selectedMaterial.material,
+        price: finalPrice, 
+        quantity: quantity, 
+      };
+
+      await addToCart(payload); 
+
+
+      setTimeout(() => {
+        setAddedToCart(false);
+      }, 3000); 
+
+    } catch (error) {
+      console.error("Failed to add item to cart:", error);
+      setError("Failed to add item to cart. Please check console for details.");
+      setAddedToCart(false);
+    }
+  };
+
+
+  const getProductDetails = (product: ProductDetails, material: MaterialVariant | null): string[] => {
+
+    if (!product || !material) return [];
 
     const detailsArray: string[] = [];
 
     const materialLine = [];
-    if (selectedMaterial.metalPurity) {
-        materialLine.push(selectedMaterial.metalPurity);
+    if (material.metalPurity) {
+        materialLine.push(material.metalPurity);
     }
-    materialLine.push(selectedMaterial.material.charAt(0).toUpperCase() + selectedMaterial.material.slice(1));
+    materialLine.push(material.material.charAt(0).toUpperCase() + material.material.slice(1));
     detailsArray.push(materialLine.join(' '));
 
 
@@ -161,14 +222,13 @@ const ProductItemPage: React.FC = () => {
         }
     }
 
-    // 3. Static Details
     detailsArray.push("Mondeux branding");
     detailsArray.push("Hallmarked by the Mondeux' Company Assay Office");
 
 
-    if (selectedMaterial.sizeVariants.length > 0) {
+    if (material.sizeVariants.length > 0) {
 
-      const uniqueSizes = selectedMaterial.sizeVariants
+      const uniqueSizes = material.sizeVariants
             .map(v => v.label)
             .filter((value, index, self) => self.indexOf(value) === index);
         
@@ -176,8 +236,8 @@ const ProductItemPage: React.FC = () => {
     }
 
 
-    if (selectedMaterial.weight) {
-        detailsArray.push(`This product weighs ${selectedMaterial.weight}g`);
+    if (material.weight) {
+        detailsArray.push(`This product weighs ${material.weight}g`);
     }
     
     return detailsArray;
@@ -198,14 +258,17 @@ const ProductItemPage: React.FC = () => {
     );
   }
 
-  if (error || !product) {
+  if (error && !addedToCart) { 
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center pt-32">
         <div className="text-center">
-          <h1 className="text-6xl font-bold mb-4">404</h1>
-          <p className="text-xl mb-8">{error || 'Product not found'}</p>
+          <h1 className="text-6xl font-bold mb-4">Error</h1>
+          <p className="text-xl mb-8 text-red-600">{error}</p>
           <button
-            onClick={() => navigate('/products')}
+            onClick={() => {
+              setError(null);
+              navigate('/products');
+            }}
             className="px-6 py-3 bg-black text-white rounded hover:bg-gray-800 transition-colors"
           >
             Back to Products
@@ -218,7 +281,7 @@ const ProductItemPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 md:pt-22">
-      <main className="max-w-9xl md:py-12 py-0">
+      <main className="max-w-9xl mx-auto md:py-12 py-0"> {/* Added mx-auto here for centering */}
         <div className="grid md:grid-cols-2 gap-10">
           {/* Product Image */}
           <div>
@@ -229,6 +292,7 @@ const ProductItemPage: React.FC = () => {
           {/* Product Info */}
           <div className="flex flex-col pt-15 px-[47px] xl:px-[80px]">
             <h2 className="text-[24px] font-ui text-[#121212] mb-2">{product.name}</h2>
+            {/* Display the calculated final price */}
             <p className="text-[19px] text-gray-600 mb-6">LE {displayPrice.toFixed(2)}</p>
 
             {/* Product Details*/}
@@ -241,7 +305,31 @@ const ProductItemPage: React.FC = () => {
             </div>
 
             <div className="max-w-lg w-full"> 
-              {/* Variant Selector (Retained) */}
+              
+              {/* 🎯 New Material Selector UI */}
+              <div className="mb-4">
+                <p className="text-sm font-semibold mb-2">Material: <span className="font-normal">{selectedMaterialName?.toUpperCase() || ''}</span></p>
+                <div className="flex gap-2 mb-4">
+                  {product?.materialVariants.map(variant => (
+                    <button
+                      key={variant.material}
+                      onClick={() => handleMaterialSelect(variant.material)}
+                      className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 border-2 
+                        ${
+                          variant.material === selectedMaterialName
+                            ? "bg-black text-white border-black shadow-md"
+                            : "bg-white text-gray-700 border-gray-300 hover:border-gray-500"
+                        }`
+                      }
+                    >
+                      {variant.material.charAt(0).toUpperCase() + variant.material.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+
+              {/* Variant Selector (Size Only) */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="relative flex-1 mr-4">
@@ -255,21 +343,23 @@ const ProductItemPage: React.FC = () => {
                     
                     {isDropdownOpen && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
-                        {combinedOptions.map((option) => (
+                        {/* Now maps over currentSizeOptions */}
+                        {currentSizeOptions.map((option) => (
                           <button
                             key={option.id}
                             onClick={() => {
-                              setSelectedMaterial(option.material);
+
                               setSelectedSize(option.size);
                               setIsDropdownOpen(false);
                             }}
                             disabled={!option.isAvailable}
                             className={`w-full px-4 py-3 text-left transition-colors ${
-                              (selectedMaterial?.material === option.material.material && selectedSize?.label === option.size.label)
+                              (selectedSize?.label === option.size.label)
                                 ? 'bg-gray-100 font-semibold' 
                                 : 'hover:bg-gray-50'
                             } ${!option.isAvailable ? 'text-gray-400 cursor-not-allowed' : ''}`}
                           >
+                            {/* Display only the size label */}
                             {option.label}
                             {!option.isAvailable && ' (Sold Out)'}
                           </button>
@@ -284,7 +374,7 @@ const ProductItemPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Add to Cart Button (Retained) */}
+              {/* Add to Cart Button (Updated onClick logic) */}
               <button 
                 onClick={handleAddToCart}
                 disabled={!selectedSize || !isAvailable || addedToCart}
@@ -299,7 +389,7 @@ const ProductItemPage: React.FC = () => {
                 {!selectedSize ? 'SELECT VARIANT' : (isAvailable ? (addedToCart ? 'ADDED TO CART ✓' : 'ADD TO CART') : 'SOLD OUT')}
               </button>
 
-              {/* Other Buttons (Retained) */}
+              {/* Other Buttons */}
               <button className="w-full py-3 bg-blue-600 text-white hover:bg-blue-700 transition-colors mb-3">
                 Buy with Shop
               </button>
@@ -308,7 +398,7 @@ const ProductItemPage: React.FC = () => {
                 More payment options
               </button>
 
-              {/* Visual Search (Retained) */}
+              {/* Visual Search */}
               <div className="border border-gray-200 py-[18px] px-[22px] flex items-start gap-4">
                 <div>
                   <p className="text-sm font-semibold mb-[-3px]">View Visually</p>

@@ -1,138 +1,188 @@
+
+const API_URL = 'http://localhost:4000/api/cart'; // Adjust the port/path if needed
+
 export interface CartItem {
-  id: number;
+  id: string;
+  productId: string; 
   name: string;
-  size: string;
+  size: string; // Size variant
+  material: string; // Material variant
   price: number;
   quantity: number;
   image: string;
 }
-
-// Storage key for localStorage
-const CART_STORAGE_KEY = 'shopping_cart';
-
-// Load cart from localStorage on initialization
-const loadCartFromStorage = (): CartItem[] => {
-  try {
-    const stored = localStorage.getItem(CART_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.error('Error loading cart from storage:', error);
-    return [];
-  }
-};
-
-// Save cart to localStorage
-const saveCartToStorage = (items: CartItem[]) => {
-  try {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  } catch (error) {
-    console.error('Error saving cart to storage:', error);
-  }
-};
-
-// Global cart state - initialize from localStorage
-let globalCartItems: CartItem[] = loadCartFromStorage();
+let globalCartItems: CartItem[] = [];
 let globalCartListeners: ((items: CartItem[]) => void)[] = [];
 
-/**
- * Add an item to the cart
- * If item already exists with same id and size, increase quantity
- */
-export const addToCart = (product: Omit<CartItem, 'quantity'>, quantity: number = 1) => {
-  const existingItemIndex = globalCartItems.findIndex(item => 
-    item.id === product.id && item.size === product.size
-  );
-
-  if (existingItemIndex > -1) {
-    // Update quantity if item exists
-    globalCartItems[existingItemIndex].quantity += quantity;
-  } else {
-    // Add new item
-    globalCartItems.push({ ...product, quantity });
-  }
-
-  // Notify all listeners
-  notifyListeners();
+const notifyListeners = () => {
+  globalCartListeners.forEach(listener => listener([...globalCartItems]));
 };
 
-/**
- * Update the quantity of a specific cart item
- */
-export const updateCartItemQuantity = (id: number, size: string, delta: number) => {
-  const itemIndex = globalCartItems.findIndex(item => 
-    item.id === id && item.size === size
-  );
+const getCommonHeaders = () => {
+  return {
+    'Content-Type': 'application/json',
+  };
+};
 
-  if (itemIndex > -1) {
-    globalCartItems[itemIndex].quantity = Math.max(1, globalCartItems[itemIndex].quantity + delta);
+
+const mapServerCartToClientCart = (serverCartData: any): CartItem[] => {
+  if (!serverCartData || !serverCartData.items) return [];
+
+  return serverCartData.items.map((item: any) => ({
+    id: item.product._id, 
+    productId: item.product._id,
+    name: item.product.name,
+    image: item.product.images?.[0]?.url || 'https://placehold.co/100x100/A0A0A0/ffffff?text=No+Image', 
+    size: item.size || 'N/A', 
+    material: item.material || 'N/A', 
+    price: item.price,
+    quantity: item.quantity,
+  }));
+};
+
+
+export const fetchCart = async (): Promise<void> => {
+  try {
+
+    const response = await fetch(API_URL, {
+      method: 'GET',
+      headers: getCommonHeaders(),
+      credentials: 'include', 
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      console.warn("User is not authenticated. Cart data not loaded.");
+      globalCartItems = [];
+    } else if (!response.ok) {
+      throw new Error('Failed to fetch cart on server.');
+    } else {
+      const result = await response.json();
+      globalCartItems = mapServerCartToClientCart(result.data);
+    }
+    
     notifyListeners();
+  } catch (error) {
+    console.error('Error fetching cart:', error);
   }
 };
 
-/**
- * Remove an item from the cart
- */
-export const removeFromCart = (id: number, size: string) => {
-  globalCartItems = globalCartItems.filter(item => 
-    !(item.id === id && item.size === size)
-  );
-  notifyListeners();
+
+export interface AddToCartPayload {
+  productId: string;
+  quantity: number;
+  size: string;
+  material: string;
+}
+
+export const addToCart = async (payload: AddToCartPayload): Promise<void> => {
+  try {
+    const response = await fetch(`${API_URL}/items`, {
+      method: 'POST',
+      headers: getCommonHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(payload), 
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Bad Request or Unauthorized' }));
+      throw new Error(`Failed to add item to cart on server: ${errorData.message}`);
+    }
+
+    await fetchCart(); 
+  } catch (error) {
+    console.error('Error adding item to cart:', error);
+    throw error;
+  }
 };
 
-/**
- * Get all cart items
- */
+
+export const updateCartItemQuantity = async (
+    productId: string, 
+    size: string, 
+    material: string,
+    delta: number
+): Promise<void> => {
+    try {
+        const payload = { size, material, delta }; 
+        
+        const response = await fetch(`${API_URL}/items/${productId}`, {
+            method: 'PUT',
+            headers: getCommonHeaders(),
+            credentials: 'include',
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `Failed to update cart item quantity on server: ${response.status} ${response.statusText}`;
+            try {
+
+              const errorData = JSON.parse(errorText);
+                errorMessage = `Failed to update cart item quantity on server: ${errorData.message || errorData.error || errorData.reason}`;
+            } catch {
+
+              errorMessage = `Failed to update cart item quantity on server: ${errorText}`;
+            }
+            throw new Error(errorMessage);
+        }
+
+        await fetchCart();
+
+    } catch (error) {
+        console.error('Error updating item quantity:', error);
+
+        throw error;
+    }
+};
+
+export const removeFromCart = async (
+  productId: string,
+  size: string,
+  material: string
+) => {
+  try {
+    const response = await fetch(`${API_URL}/items/${productId}`, {
+      method: 'DELETE',
+      headers: {
+        ...getCommonHeaders(),
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ size, material }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Bad Request or Unauthorized' }));
+      throw new Error(`Failed to remove item from cart on server: ${errorData.message}`);
+    }
+
+    await fetchCart();
+  } catch (error) {
+    console.error('Error removing item from cart:', error);
+  }
+};
+
+
 export const getCartItems = (): CartItem[] => {
   return [...globalCartItems];
 };
 
-/**
- * Get total number of items in cart
- */
+
 export const getCartCount = (): number => {
   return globalCartItems.reduce((sum, item) => sum + item.quantity, 0);
 };
 
-/**
- * Get cart subtotal
- */
 export const getCartSubtotal = (): number => {
   return globalCartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 };
 
-/**
- * Clear all items from cart
- */
-export const clearCart = () => {
-  globalCartItems = [];
-  notifyListeners();
-};
-
-/**
- * Subscribe to cart changes
- * Returns unsubscribe function
- */
 export const subscribeToCart = (listener: (items: CartItem[]) => void): (() => void) => {
   globalCartListeners.push(listener);
   
-  // Return unsubscribe function
+
   return () => {
     globalCartListeners = globalCartListeners.filter(l => l !== listener);
   };
 };
 
-/**
- * Initialize cart with items (useful for loading from storage)
- */
-export const initializeCart = (items: CartItem[]) => {
-  globalCartItems = [...items];
-  notifyListeners();
-};
-
-/**
- * Notify all listeners of cart changes
- */
-const notifyListeners = () => {
-  saveCartToStorage(globalCartItems);
-  globalCartListeners.forEach(listener => listener([...globalCartItems]));
-};
+fetchCart();
