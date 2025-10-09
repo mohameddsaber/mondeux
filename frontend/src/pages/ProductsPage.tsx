@@ -1,67 +1,88 @@
 import ProductCard, { type Product } from "../components/ProductCard.tsx";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import FilterSidebar from "../components/FilterSidebar.tsx"
 import { Plus, Minus } from "lucide-react";
+import { Link } from "react-router-dom";
+
 
 const ProductsPage: React.FC = () => {
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
   const availabilityOptions = ["In Stock", "Out of Stock", "Pre-Order"];
-    const toggleAvailability = (option: string) => {
+  const toggleAvailability = (option: string) => {
     setSelectedAvailability((prev) =>
       prev.includes(option) ? prev.filter((item) => item !== option) : [...prev, option]
     );
   };
-  
 
-  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('best-selling');
   const sortOptions = [
-  { value: "featured", label: "FEATURED" },
-  { value: "price-low", label: "Price: Low to High" },
-  { value: "price-high", label: "Price: High to Low" },
-  { value: "newest", label: "Newest" },
-  { value: "best-selling", label: "Best Selling" },
+    { value: "featured", label: "FEATURED" },
+    { value: "price_asc", label: "Price: Low to High" },
+    { value: "price_desc", label: "Price: High to Low" },
+    { value: "newest", label: "Newest" },
+    { value: "best-selling", label: "Best Selling" },
   ];
 
-  const products: Product[] = [
-    {
-      id: 1,
-      name: "SILVER WILD WEST RING",
-      price: "LE 4,331.31",
-      image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=500&h=500&fit=crop"
-    },
-    {
-      id: 2,
-      name: "SILVER WESTERN RING",
-      price: "LE 4,880.05",
-      image: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=500&h=500&fit=crop"
-    },
-    {
-      id: 3,
-      name: "SILVER MOONLIGHT RING",
-      price: "LE 4,331.31",
-      image: "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=500&h=500&fit=crop"
-    },
-    {
-      id: 4,
-      name: "GOLD MOONLIGHT RING",
-      price: "LE 4,880.05",
-      image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500&h=500&fit=crop"
-    }
-  ];
-
-  const [sortBy, setSortBy] = useState('featured');
   const [filterOpen, setFilterOpen] = useState(false);
 
   const onSortChange = (value: string) => {
     setSortBy(value);
-    setIsSortOpen(false);
   };
+
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
+      
+      let sortQuery = '';
+      let endpoint = '';
+      
+      if (sortBy === 'featured') {
+
+        endpoint = `http://localhost:4000/api/products/featured?limit=20`; 
+      } else if (sortBy === 'best-selling') {
+
+        sortQuery = 'sort=popular'; 
+        endpoint = `http://localhost:4000/api/products?limit=20&${sortQuery}`;
+      } else {
+
+        sortQuery = `sort=${sortBy}`;
+        endpoint = `http://localhost:4000/api/products?limit=20&${sortQuery}`;
+      }
+
+      try {
+        const response = await fetch(endpoint);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        
+        setProducts(result.data || []); 
+      } catch (e) {
+        if (e instanceof Error) {
+            setError(e.message);
+        } else {
+            setError('An unknown error occurred.');
+        }
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [sortBy]); 
+
 
   return (
     <div className="min-h-screen bg-white">
-
-      
       <main className=" mt-[77px] md:mt-[130px]">
         <div className="text-center md:px-[80px] md:pt-[50px] md:pb-[20px] pt-[37.5px] px-[60px] pb-[15px] mb-6">
           <h2 className="md:text-[28px] text-[22px] font-ui text-[#121212] mb-3 -tracking-tight">Shop All</h2>
@@ -69,38 +90,40 @@ const ProductsPage: React.FC = () => {
             and essential accessories all in one place - designed to elevate the everyday.</p>
         </div>
         
-      <div className="pb-[10px] border-b border-gray-200 mx-5">
+        <div className="pb-[10px] border-b border-gray-200 mx-5">
 
-        {/* Desktop (md and up) */}
-        <div className="hidden md:flex items-center justify-between ">
-          <div className="relative">
-            <button
-              onClick={() => setAvailabilityOpen(!availabilityOpen)}
-              className="w-full flex items-center justify-between text-sm font-medium tracking-wide"
-            >
-              <span className="text-gray-500 text-[12px] font-[Karla] tracking-widest cursor-pointer">AVAILABILITY</span>
-              {availabilityOpen ? <Minus size={12} /> : <Plus size={12} />}
-            </button>
+          {/* Desktop (md and up) */}
+          <div className="hidden md:flex items-center justify-between ">
+            {/* Availability Filter */}
+            <div className="relative">
+              <button
+                onClick={() => setAvailabilityOpen(!availabilityOpen)}
+                className="w-full flex items-center justify-between text-sm font-medium tracking-wide"
+              >
+                <span className="text-gray-500 text-[12px] font-[Karla] tracking-widest cursor-pointer">AVAILABILITY</span>
+                {availabilityOpen ? <Minus size={12} /> : <Plus size={12} />}
+              </button>
 
-            {availabilityOpen && (
-              <div className="absolute left-0 top-full mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                <div className="px-6 py-6 space-y-3">
-                  {availabilityOptions.map((option) => (
-                    <label key={option} className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedAvailability.includes(option)}
-                        onChange={() => toggleAvailability(option)}
-                        className="w-5 h-5 border-gray-400 rounded"
-                      />
-                      <span className="ml-3 text-sm">{option}</span>
-                    </label>
-                  ))}
+              {availabilityOpen && (
+                <div className="absolute left-0 top-full mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <div className="px-6 py-6 space-y-3">
+                    {availabilityOptions.map((option) => (
+                      <label key={option} className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedAvailability.includes(option)}
+                          onChange={() => toggleAvailability(option)}
+                          className="w-5 h-5 border-gray-400 rounded"
+                        />
+                        <span className="ml-3 text-sm">{option}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
+            {/* Sort Dropdown */}
             <div className="flex justify-end">
               <div className="flex items-center gap-2">
                 <select
@@ -114,37 +137,51 @@ const ProductsPage: React.FC = () => {
                     </option>
                   ))}
                 </select>
+                
                 <Plus size={12} className="text-gray-700" />
               </div>
             </div>
+          </div>
+
+          {/* Mobile (below md) */}
+          <div className="flex md:hidden items-center justify-between">
+              <button 
+              onClick={() => setFilterOpen(!filterOpen)}
+              className="text-sm font-medium mx-[15px] px-[18px] font-[Karla] tracking-wide uppercase cursor-pointertracking-wide hover:text-gray-600"
+              >
+              FILTER
+              </button>
+          </div>
+          
+          {/* Filter Sidebar */}
+          <FilterSidebar 
+              isOpen={filterOpen}
+              onClose={() => setFilterOpen(false)}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+          />
+
         </div>
 
-        {/* Mobile (below md) */}
-        <div className="flex md:hidden items-center justify-between">
-            <button 
-            onClick={() => setFilterOpen(!filterOpen)}
-            className="text-sm font-medium mx-[15px] px-[18px] font-[Karla] tracking-wide uppercase cursor-pointertracking-wide hover:text-gray-600"
-            >
-            FILTER
-            </button>
-        </div>
-        
-        {/* Filter Sidebar */}
-        <FilterSidebar 
-            isOpen={filterOpen}
-            onClose={() => setFilterOpen(false)}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-        />
-
-        </div>
-
-        
-        <div className="grid grid-cols-2 p-[20px] md:grid-cols-4 gap-4">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {/* Product Display Area */}
+        {loading ? (
+            <div className="text-center p-8">Loading products...</div>
+        ) : error ? (
+            <div className="text-center p-8 text-red-600">Error fetching products: {error}</div>
+        ) : products.length === 0 ? (
+            <div className="text-center p-8 text-gray-500">No products found.</div>
+        ) : (
+            <div className="grid grid-cols-2 p-[20px] md:grid-cols-4 gap-4">
+              {products.map((product) => (
+                <Link 
+                    to={`/products/${product.slug}`} 
+                    key={product._id}
+                >
+                    <ProductCard product={product} />
+                </Link>              
+              ))}
+            </div>
+        )}
       </main>
     </div>
   );

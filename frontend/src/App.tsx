@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route, useParams } from "react-router-dom";
 import Header from "./components/Header";
 import NavBar from "./components/NavBar";
-import ProductsPage from "./pages/AllProductsPage";
+import ProductsPage from "./pages/ProductsPage";
 import HomePage from "./pages/HomePage";
 import ProductItemPage from "./pages/ProductItemPage";
 import CartPage from "./pages/CartPage";
@@ -32,7 +32,7 @@ function App() {
       try {
         const res = await fetch("http://localhost:4000/api/users/profile", {
           method: "GET",
-          credentials: "include", // important if using cookies
+          credentials: "include",
         });
 
         const data = await res.json();
