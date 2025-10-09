@@ -12,6 +12,17 @@ const cartSchema = new mongoose.Schema({
       ref: 'Product',
       required: true
     },
+    size: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    
+    material: {
+      type: String,
+      required: true,
+      trim: true
+    },
     quantity: {
       type: Number,
       required: true,
@@ -19,6 +30,7 @@ const cartSchema = new mongoose.Schema({
       default: 1
     },
     price: Number 
+
   }],
   totalAmount: {
     type: Number,

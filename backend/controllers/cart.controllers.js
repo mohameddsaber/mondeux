@@ -1,237 +1,199 @@
-
 import Cart from '../models/cart.model.js';
 import Product from '../models/product.model.js';
 
+const populateAndSaveCart = async (cart, res) => {
+
+  await cart.populate({
+    path: 'items.product',
+    select: 'name slug price images stock isActive'
+  });
+
+  cart.items = cart.items.filter(item => 
+    item.product && item.product.isActive && item.quantity > 0
+  );
+
+  cart.totalAmount = cart.items.reduce((total, item) => {
+    const price = Number(item.price) || 0;
+    const quantity = Number(item.quantity) || 0;
+    return total + (price * quantity);
+  }, 0);
+
+  cart.markModified('items');
+  
+  await cart.save();
+
+  res.json({
+    success: true,
+    data: cart
+  });
+};
+// ----------------------------------------------------------------------
+
 export const getCart = async (req, res) => {
   try {
-    let cart = await Cart.findOne({ user: req.user._id })
-      .populate({
-        path: 'items.product',
-        select: 'name slug price images stock isActive'
-      });
-
-    if (!cart) {
-      cart = await Cart.create({ user: req.user._id, items: [] });
-    }
-
-    // Filter out inactive products
-    cart.items = cart.items.filter(item => item.product && item.product.isActive);
-
-    // Recalculate total
-    cart.totalAmount = cart.items.reduce((total, item) => {
-      return total + (item.price * item.quantity);
-    }, 0);
-
-    await cart.save();
-
-    res.json({
-      success: true,
-      data: cart
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-export const addToCart = async (req, res) => {
-  try {
-    const { productId, quantity = 1 } = req.body;
-
-    // Verify product exists and is active
-    const product = await Product.findById(productId);
-    if (!product || !product.isActive) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    // Check stock
-    if (product.stock < quantity) {
-      return res.status(400).json({
-        success: false,
-        message: `Only ${product.stock} items available in stock`
-      });
-    }
-
     let cart = await Cart.findOne({ user: req.user._id });
 
     if (!cart) {
       cart = await Cart.create({ user: req.user._id, items: [] });
     }
 
-    // Check if product already in cart
-    const itemIndex = cart.items.findIndex(
-      item => item.product.toString() === productId
+    await populateAndSaveCart(cart, res);
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const addToCart = async (req, res) => {
+  try {
+    const { productId, quantity = 1, size, material } = req.body; 
+
+    const product = await Product.findById(productId);
+    if (!product || !product.isActive) {
+      return res.status(404).json({ success: false, message: 'Product not found or inactive' });
+    }
+    
+    let cart = await Cart.findOne({ user: req.user._id });
+    if (!cart) {
+      cart = await Cart.create({ user: req.user._id, items: [] });
+    }
+
+    const existingItemIndex = cart.items.findIndex(item => 
+      item.product.toString() === productId && 
+      item.size === size &&
+      item.material === material
     );
 
-    if (itemIndex > -1) {
-      // Update quantity
-      const newQuantity = cart.items[itemIndex].quantity + quantity;
-      
-      if (product.stock < newQuantity) {
-        return res.status(400).json({
-          success: false,
-          message: `Only ${product.stock} items available in stock`
-        });
-      }
+    const price = product.materialVariants.find(mv => mv.material === material)?.price || product.price;
 
-      cart.items[itemIndex].quantity = newQuantity;
-      cart.items[itemIndex].price = product.price;
+    if (existingItemIndex > -1) {
+
+      cart.items[existingItemIndex].quantity += quantity;
     } else {
-      // Add new item
+
       cart.items.push({
         product: productId,
         quantity,
-        price: product.price
+        price, 
+        size,
+        material
       });
     }
+    await populateAndSaveCart(cart, res);
 
-    // Calculate total
-    cart.totalAmount = cart.items.reduce((total, item) => {
-      return total + (item.price * item.quantity);
-    }, 0);
-
-    await cart.save();
-
-    // Populate and return
-    await cart.populate({
-      path: 'items.product',
-      select: 'name slug price images stock'
-    });
-
-    res.json({
-      success: true,
-      data: cart
-    });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 export const updateCartItem = async (req, res) => {
   try {
-    const { quantity } = req.body;
+    const { size, material, delta } = req.body;
     const { productId } = req.params;
 
-    if (quantity < 1) {
+    if (!size || !material || typeof delta !== 'number' || !Number.isInteger(delta) || delta === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Quantity must be at least 1'
-      });
-    }
-
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    if (product.stock < quantity) {
-      return res.status(400).json({
-        success: false,
-        message: `Only ${product.stock} items available in stock`
+        message: 'Missing or invalid fields: size, material, or delta must be a non-zero integer'
       });
     }
 
     const cart = await Cart.findOne({ user: req.user._id });
 
     if (!cart) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cart not found'
-      });
+      return res.status(404).json({ success: false, message: 'Cart not found' });
     }
 
     const itemIndex = cart.items.findIndex(
-      item => item.product.toString() === productId
+      item => item.product.toString() === productId &&
+              item.size === size &&
+              item.material === material
     );
 
     if (itemIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Item not found in cart'
-      });
+      return res.status(404).json({ success: false, message: 'Item not found in cart' });
     }
 
-    cart.items[itemIndex].quantity = quantity;
-    cart.items[itemIndex].price = product.price;
+    const currentQuantity = cart.items[itemIndex].quantity;
+    const newQuantity = currentQuantity + delta;
+    
+    if (newQuantity <= 0) {
 
-    // Recalculate total
-    cart.totalAmount = cart.items.reduce((total, item) => {
-      return total + (item.price * item.quantity);
-    }, 0);
+      cart.items = cart.items.filter((_, index) => index !== itemIndex);
+    } else {
+        const product = await Product.findById(productId);
+        if (!product || !product.isActive) {
 
-    await cart.save();
+          cart.items = cart.items.filter((_, index) => index !== itemIndex);
+        } else {
+            const materialVariant = product.materialVariants.find(mv => mv.material === material);
+            const sizeVariant = materialVariant?.sizeVariants.find(sv => sv.label === size);
 
-    await cart.populate({
-      path: 'items.product',
-      select: 'name slug price images stock'
-    });
+            if (!materialVariant || !sizeVariant) {
 
-    res.json({
-      success: true,
-      data: cart
-    });
+              cart.items = cart.items.filter((_, index) => index !== itemIndex);
+            }
+            else if (sizeVariant.stock < newQuantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Only ${sizeVariant.stock} items available in stock`
+                });
+            } else {
+
+              cart.items[itemIndex].quantity = newQuantity;
+                cart.items[itemIndex].price = materialVariant.price; 
+            }
+        }
+    }
+
+    await populateAndSaveCart(cart, res);
+
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    console.error('Error in updateCartItem:', error);
+    res.status(500).json({ success: false, message: 'Server error: ' + error.message });
   }
 };
+
 export const removeFromCart = async (req, res) => {
   try {
+    const { productId } = req.params;
+    const { size, material } = req.body;
+
     const cart = await Cart.findOne({ user: req.user._id });
 
     if (!cart) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cart not found'
-      });
+      return res.status(404).json({ success: false, message: 'Cart not found' });
     }
 
     cart.items = cart.items.filter(
-      item => item.product.toString() !== req.params.productId
+      (item) =>
+        !(
+          item.product.toString() === productId &&
+          item.size === size &&
+          item.material === material
+        )
     );
 
-    // Recalculate total
-    cart.totalAmount = cart.items.reduce((total, item) => {
-      return total + (item.price * item.quantity);
-    }, 0);
+    await populateAndSaveCart(cart, res);
 
-    await cart.save();
-
-    await cart.populate({
-      path: 'items.product',
-      select: 'name slug price images stock'
-    });
-
-    res.json({
-      success: true,
-      data: cart
-    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+
 export const clearCart = async (req, res) => {
   try {
     const cart = await Cart.findOne({ user: req.user._id });
 
     if (!cart) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cart not found'
-      });
+      return res.status(404).json({ success: false, message: 'Cart not found' });
     }
 
     cart.items = [];
-    cart.totalAmount = 0;
-    await cart.save();
+    await populateAndSaveCart(cart, res);
 
-    res.json({
-      success: true,
-      data: cart
-    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
