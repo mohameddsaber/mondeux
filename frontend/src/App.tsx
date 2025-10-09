@@ -1,16 +1,28 @@
 import { useEffect, useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useParams } from "react-router-dom";
 import Header from "./components/Header";
 import NavBar from "./components/NavBar";
-import ProductsPage from "./pages/ProductsPage";
+import ProductsPage from "./pages/AllProductsPage";
 import HomePage from "./pages/HomePage";
 import ProductItemPage from "./pages/ProductItemPage";
 import CartPage from "./pages/CartPage";
 import AuthPage from "./pages/AuthPage";
+import CategoryPage from "./pages/CategoryPage";
+import SubCategoryPage from "./pages/SubCategoryPage";
 import LoyaltyScheme from "./pages/LoyalityScheme";
 import LoyaltySchemeNoAuth from "./pages/LoyaltySchemeNoAuth";
 import { Award } from "lucide-react";
 
+const CategoryPageWrapper = () => {
+    const { categorySlug } = useParams<{ categorySlug: string }>();
+    if (!categorySlug) return <div>Error: Category not specified.</div>;
+    return <CategoryPage categorySlug={categorySlug} />;
+}
+const SubCategoryPageWrapper = () => {
+    const { subCategorySlug } = useParams<{ subCategorySlug: string }>();
+    if (!subCategorySlug) return <div>Error: SubCategory not specified.</div>;
+    return <SubCategoryPage subCategorySlug={subCategorySlug} />;
+}
 function App() {
   const [isLoyaltyOpen, setIsLoyaltyOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -50,18 +62,17 @@ function App() {
         <NavBar  />
       </div>
 
+
       {/* Routes */}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/products" element={<ProductsPage />} />
-        <Route path="products/:category" element={<ProductsPage />} />
-        <Route path="products/:category/:subcategory" element={<ProductsPage />} />
-        <Route
-          path="products/:category/:subcategory/:productId"
-          element={<ProductItemPage />}
-        />
+        <Route path="/category/:categorySlug" element={<CategoryPageWrapper />} />
+        <Route path="/subcategory/:subCategorySlug" element={<SubCategoryPageWrapper />} />
+        <Route path="/products/:slug" element={<ProductItemPage />} />
+
       </Routes>
 
       {/* Loyalty Scheme Button */}
