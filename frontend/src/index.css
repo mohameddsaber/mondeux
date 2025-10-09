@@ -106,3 +106,16 @@
   }
 }
 
+
+
+.custom-scroll-hide {
+    /* For Firefox: Hides the scrollbar */
+    scrollbar-width: none;
+    /* For IE/Edge (older): Hides the scrollbar */
+    -ms-overflow-style: none;
+}
+
+/* For Chrome, Safari, and Opera (WebKit/Blink browsers): Hides the scrollbar */
+.custom-scroll-hide::-webkit-scrollbar {
+    display: none;
+}
