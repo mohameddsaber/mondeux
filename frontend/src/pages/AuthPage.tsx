@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
+import {fetchCart} from '../utils/cartManager';
 
 export default function AuthPage() {
   const location = useLocation();
@@ -9,7 +10,6 @@ export default function AuthPage() {
 
   const [isLogin, setIsLogin] = useState(mode !== "signup");
 
-  // Sync with query param (so if user switches tabs manually)
   useEffect(() => {
     setIsLogin(mode !== "signup");
   }, [mode]);
@@ -59,6 +59,11 @@ function LoginForm({ onToggle }) {
         // Store token in localStorage
         localStorage.setItem('token', data.data.token);
         localStorage.setItem('user', JSON.stringify(data.data));
+            try {
+            await fetchCart(); 
+            } catch (e) {
+            console.error("Failed to load cart after login:", e);
+            }
         
         
         // Redirect or update app state here

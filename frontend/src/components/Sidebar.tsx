@@ -33,16 +33,16 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
   try {
     const res = await fetch(`http://localhost:4000/api/users/logout`, {
       method: "POST",
-      credentials: "include", // if using cookies
+      credentials: "include", 
       headers: { "Content-Type": "application/json" },
     });
 
     const data = await res.json();
 
     if (res.ok) {
-      // You can show a toast or redirect
+
       console.log("Logged out successfully");
-      window.location.href = "/login"; // optional redirect
+      window.location.href = "//auth?mode=login"; 
     } else {
       console.error(data.message || "Logout failed");
     }
