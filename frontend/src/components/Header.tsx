@@ -64,9 +64,17 @@ function Header() {
           </div>
           
           <nav className="flex items-center justify-center gap-6 text-[12px] color-[#121212] font-medium overflow-x-auto font-[Karla] tracking-wider">
-            <Link to="/products" className="whitespace-nowrap hover:text-gray-600 transition">SHOP ALL</Link>
-            <Link to="/products" className="whitespace-nowrap hover:text-gray-600 transition">NEW IN</Link>
-            <Link to="/products" className="whitespace-nowrap hover:text-gray-600 transition">BEST SELLERS</Link>
+            <Link to="/products?sort=price_asc" className="whitespace-nowrap hover:text-gray-600 transition">
+              SHOP ALL
+            </Link>
+
+            <Link to="/products?sort=newest&title=NEW IN" className="whitespace-nowrap hover:text-gray-600 transition">
+              NEW IN
+            </Link>
+
+            <Link to="/products?sort=best-selling&title=BEST SELLERS" className="whitespace-nowrap hover:text-gray-600 transition">
+              BEST SELLERS
+            </Link>
             <Link to="/subcategory/gold-rings" className="whitespace-nowrap hover:text-gray-600 transition">SHOP GOLD RINGS</Link>
             <Link to="/subcategory/silver-rings" className="whitespace-nowrap hover:text-gray-600 transition">SHOP SILVER RINGS</Link>
           </nav>

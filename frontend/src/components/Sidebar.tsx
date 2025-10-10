@@ -109,18 +109,23 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
 
             {/* New In */}
             <li>
-              <a href="#" className={sidebarLink}>NEW IN</a>
+            <Link to="/products?sort=newest" className={sidebarLink}>
+              NEW IN
+            </Link>            
             </li>
 
             {/* Best Sellers */}
             <li>
-              <a href="#" className={sidebarLink}>BEST SELLERS</a>
+            <Link to="/products?sort=best-selling" className={sidebarLink}>
+              BEST SELLERS
+            </Link>              
             </li>
 
-            {/* Perle */}
+            {/* Perle
             <li>
               <a href="#" className={sidebarLink}>PERLE</a>
-            </li>
+            </li> */}
+
 
             {/* Shop All - Expandable */}
             <li>

@@ -2,7 +2,8 @@ import ProductCard, { type Product } from "../components/ProductCard.tsx";
 import { useState, useEffect } from "react";
 import FilterSidebar from "../components/FilterSidebar.tsx"
 import { Plus, Minus } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link,useLocation } from "react-router-dom";
+
 
 
 const ProductsPage: React.FC = () => {
@@ -19,8 +20,20 @@ const ProductsPage: React.FC = () => {
       prev.includes(option) ? prev.filter((item) => item !== option) : [...prev, option]
     );
   };
+const [sortBy, setSortBy] = useState<string>("best-selling");
+    const [title,setTitle] = useState<string>();
+  const location = useLocation();
+  
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sortParam = params.get("sort") || "best-selling";
+    const titleParams=params.get("title")||"SHOP ALL";
 
-  const [sortBy, setSortBy] = useState('best-selling');
+    setSortBy(sortParam);
+    setTitle(titleParams);
+  }, [location.search]);
+
+
   const sortOptions = [
     { value: "featured", label: "FEATURED" },
     { value: "price_asc", label: "Price: Low to High" },
@@ -85,7 +98,7 @@ const ProductsPage: React.FC = () => {
     <div className="min-h-screen bg-white">
       <main className=" mt-[77px] md:mt-[130px]">
         <div className="text-center md:px-[80px] md:pt-[50px] md:pb-[20px] pt-[37.5px] px-[60px] pb-[15px] mb-6">
-          <h2 className="md:text-[28px] text-[22px] font-ui text-[#121212] mb-3 -tracking-tight">Shop All</h2>
+          <h2 className="md:text-[28px] text-[22px] font-ui text-[#121212] mb-3 -tracking-tight">{title}</h2>
           <p className="text-gray-600 text-[12px]">Bold rings, minimal earrings, refined necklaces, understated bracelets, 
             and essential accessories all in one place - designed to elevate the everyday.</p>
         </div>
