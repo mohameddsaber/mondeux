@@ -1,5 +1,6 @@
 import {  Search, Plus } from 'lucide-react';
 import { useState } from "react";
+import { Link } from 'react-router-dom';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -132,11 +133,11 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
               {expandedMenus["shop-all"] && (
                 <ul className={submenu}>
-                  <li><a href="#" className={submenuLink}>All Jewelry</a></li>
-                  <li><a href="#" className={submenuLink}>Shop Rings</a></li>
-                  <li><a href="#" className={submenuLink}>Shop Bracelets</a></li>
-                  <li><a href="#" className={submenuLink}>Shop Necklaces</a></li>
-                  <li><a href="#" className={submenuLink}>Shop Wallets</a></li>
+                  <li><Link to="/products" className={submenuLink}>All Jewelry</Link></li>
+                  <li><Link to="/category/rings" className={submenuLink}>Shop Rings</Link></li>
+                  <li><Link to="/category/bracelets" className={submenuLink}>Shop Bracelets</Link></li>
+                  <li><Link to="/category/necklaces" className={submenuLink}>Shop Necklaces</Link></li>
+                  <li><Link to="/category/wallets" className={submenuLink}>Shop Wallets</Link></li>
                 </ul>
               )}
             </li>
@@ -153,12 +154,12 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               {expandedMenus["rings"] && (
                 <ul className={submenu}>
-                  <li><a href="#" className={submenuLink}>All Rings</a></li>
-                  <li><a href="#" className={submenuLink}>Silver Rings</a></li>
-                  <li><a href="#" className={submenuLink}>Gold Rings</a></li>
-                  <li><a href="#" className={submenuLink}>Statement Rings</a></li>
-                  <li><a href="#" className={submenuLink}>Stone Rings</a></li>
-                  <li><a href="#" className={submenuLink}>Signet Rings</a></li>
+                  <li><Link to="category/rings" className={submenuLink}>All Rings</Link></li>
+                  <li><Link to="subcategory/silver-rings" className={submenuLink}>Silver Rings</Link></li>
+                  <li><Link to="subcategory/gold-rings" className={submenuLink}>Gold Rings</Link></li>
+                  {/* <li><Link to="#" className={submenuLink}>Statement Rings</Link></li>
+                  <li><Link to="#" className={submenuLink}>Stone Rings</Link></li>
+                  <li><Link to="#" className={submenuLink}>Signet Rings</Link></li> */}
                 </ul>
               )}
             </li>
@@ -174,11 +175,11 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
               {expandedMenus["necklaces"] && (
                 <ul className={submenu}>
-                  <li><a href="#" className={submenuLink}>All Necklaces</a></li>
-                  <li><a href="#" className={submenuLink}>Silver Necklaces</a></li>
-                  <li><a href="#" className={submenuLink}>Gold Necklaces</a></li>
-                  <li><a href="#" className={submenuLink}>Pendant Necklaces</a></li>
-                  <li><a href="#" className={submenuLink}>Chain Necklaces</a></li>
+                  <li><Link to="/category/necklaces" className={submenuLink}>All Necklaces</Link></li>
+                  <li><Link to="subcategory/silver-necklaces" className={submenuLink}>Silver Necklaces</Link></li>
+                  <li><Link to="subcategory/gold-necklaces" className={submenuLink}>Gold Necklaces</Link></li>
+                  {/* <li><a href="#" className={submenuLink}>Pendant Necklaces</a></li>
+                  <li><a href="#" className={submenuLink}>Chain Necklaces</a></li> */}
                 </ul>
               )}
             </li>
@@ -194,11 +195,10 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
               {expandedMenus["bracelets"] && (
                 <ul className={submenu}>
-                  <li><a href="#" className={submenuLink}>All Bracelets</a></li>
-                  <li><a href="#" className={submenuLink}>Silver Bracelets</a></li>
-                  <li><a href="#" className={submenuLink}>Gold Bracelets</a></li>
-                  <li><a href="#" className={submenuLink}>Cuff Bracelets</a></li>
-                  <li><a href="#" className={submenuLink}>Classic Bracelets</a></li>
+                  <li><Link to="/category/bracelets" className={submenuLink}>All Bracelets</Link></li>
+                  <li><Link to="/subcategory/silver-bracelets" className={submenuLink}>Silver Bracelets</Link></li>
+                  <li><Link to="/subcategory/gold-bracelets" className={submenuLink}>Gold Bracelets</Link></li>
+                  {/* <li><a href="#" className={submenuLink}>Cuff Bracelets</a></li> */}
                 </ul>
               )}
             </li>
