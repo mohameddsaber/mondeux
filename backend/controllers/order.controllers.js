@@ -2,7 +2,6 @@ import Order from '../models/order.model.js';
 import Cart from '../models/cart.model.js';
 import Product from '../models/product.model.js';
 
-
 export const getMyOrders = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -13,7 +12,7 @@ export const getMyOrders = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(skip)
-      .populate('items.product', 'name slug images')
+      .populate('items.product', 'name slug materialVariants')
       .select('-__v');
 
     const total = await Order.countDocuments({ user: req.user._id });
@@ -36,7 +35,7 @@ export const getMyOrders = async (req, res) => {
 export const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate('items.product', 'name slug images');
+      .populate('items.product', 'name slug materialVariants');
 
     if (!order) {
       return res.status(404).json({
@@ -45,7 +44,6 @@ export const getOrderById = async (req, res) => {
       });
     }
 
-    // Check if order belongs to user (unless admin)
     if (order.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -68,10 +66,18 @@ export const createOrder = async (req, res) => {
       shippingAddress,
       paymentMethod,
       shippingCost = 0,
-      tax = 0
+      tax = 0,
+      customerNotes = ''
     } = req.body;
 
-    // Get user cart
+    if (!shippingAddress || !shippingAddress.name || !shippingAddress.street || 
+        !shippingAddress.city || !shippingAddress.zipCode || !shippingAddress.phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Complete shipping address is required'
+      });
+    }
+
     const cart = await Cart.findOne({ user: req.user._id })
       .populate('items.product');
 
@@ -82,7 +88,6 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Verify stock and prepare order items
     const orderItems = [];
     let subtotal = 0;
 
@@ -96,35 +101,65 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      if (product.stock < item.quantity) {
+      const materialVariant = product.materialVariants.find(
+        mv => mv.material === item.material
+      );
+
+      if (!materialVariant) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for ${product.name}. Only ${product.stock} available.`
+          message: `Material variant "${item.material}" not found for ${product.name}`
         });
       }
+
+      const sizeVariant = materialVariant.sizeVariants.find(
+        sv => sv.label === item.size
+      );
+
+      if (!sizeVariant) {
+        return res.status(400).json({
+          success: false,
+          message: `Size "${item.size}" not found for ${product.name} in ${item.material}`
+        });
+      }
+
+      if (sizeVariant.stock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for ${product.name} (${item.material} - ${item.size}). Only ${sizeVariant.stock} available.`
+        });
+      }
+
+      const variantImage = materialVariant.images?.[0]?.url || 
+                          product.materialVariants[0]?.images?.[0]?.url || 
+                          '';
 
       orderItems.push({
         product: product._id,
         name: product.name,
+        size: item.size,
+        material: item.material,
         quantity: item.quantity,
-        price: product.price,
-        image: product.images[0]?.url
+        price: item.price,
+        image: variantImage
       });
 
-      subtotal += product.price * item.quantity;
+      subtotal += item.price * item.quantity;
 
-      // Decrease stock
-      product.stock -= item.quantity;
+      sizeVariant.stock -= item.quantity;
+      
+      materialVariant.stock = materialVariant.sizeVariants.reduce(
+        (total, sv) => total + sv.stock, 
+        0
+      );
+
       await product.save();
     }
 
-    // Generate order number
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    // Calculate total
     const totalAmount = subtotal + shippingCost + tax;
 
-    // Create order
     const order = await Order.create({
       orderNumber,
       user: req.user._id,
@@ -136,19 +171,21 @@ export const createOrder = async (req, res) => {
       totalAmount,
       paymentMethod,
       status: 'pending',
-      paymentStatus: 'pending'
+      paymentStatus: 'pending',
+      customerNotes
     });
 
-    // Clear cart
     cart.items = [];
     cart.totalAmount = 0;
     await cart.save();
 
     res.status(201).json({
       success: true,
-      data: order
+      data: order,
+      message: 'Order placed successfully'
     });
   } catch (error) {
+    console.error('Error creating order:', error);
     res.status(400).json({ success: false, message: error.message });
   }
 };
@@ -164,7 +201,6 @@ export const cancelOrder = async (req, res) => {
       });
     }
 
-    // Check if order belongs to user
     if (order.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -172,7 +208,6 @@ export const cancelOrder = async (req, res) => {
       });
     }
 
-    // Can only cancel pending or processing orders
     if (!['pending', 'processing'].includes(order.status)) {
       return res.status(400).json({
         success: false,
@@ -180,12 +215,32 @@ export const cancelOrder = async (req, res) => {
       });
     }
 
-    // Restore stock
+
     for (const item of order.items) {
       const product = await Product.findById(item.product);
+      
       if (product) {
-        product.stock += item.quantity;
-        await product.save();
+        const materialVariant = product.materialVariants.find(
+          mv => mv.material === item.material
+        );
+
+        if (materialVariant) {
+          const sizeVariant = materialVariant.sizeVariants.find(
+            sv => sv.label === item.size
+          );
+
+          if (sizeVariant) {
+
+            sizeVariant.stock += item.quantity;
+            
+            materialVariant.stock = materialVariant.sizeVariants.reduce(
+              (total, sv) => total + sv.stock,
+              0
+            );
+
+            await product.save();
+          }
+        }
       }
     }
 
@@ -195,12 +250,15 @@ export const cancelOrder = async (req, res) => {
 
     res.json({
       success: true,
-      data: order
+      data: order,
+      message: 'Order cancelled successfully'
     });
   } catch (error) {
+    console.error('Error cancelling order:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 export const getAllOrders = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -251,7 +309,6 @@ export const updateOrderStatus = async (req, res) => {
 
     order.status = status;
 
-    // Update timestamps
     if (status === 'shipped') {
       order.shippedAt = new Date();
     } else if (status === 'delivered') {

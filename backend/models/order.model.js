@@ -18,6 +18,14 @@ const orderSchema = new mongoose.Schema({
       required: true
     },
     name: String,
+    size: {
+      type: String,
+      required: true
+    },
+    material: {
+      type: String,
+      required: true
+    },
     quantity: {
       type: Number,
       required: true,
@@ -27,18 +35,16 @@ const orderSchema = new mongoose.Schema({
     image: String
   }],
   
-  // Shipping information
   shippingAddress: {
-    name: String,
-    street: String,
-    city: String,
+    name: { type: String, required: true },
+    street: { type: String, required: true },
+    city: { type: String, required: true },
     state: String,
-    zipCode: String,
-    country: String,
-    phone: String
+    zipCode: { type: String, required: true },
+    country: { type: String, default: 'Egypt' },
+    phone: { type: String, required: true }
   },
   
-  // Pricing breakdown
   subtotal: {
     type: Number,
     required: true
@@ -63,7 +69,7 @@ const orderSchema = new mongoose.Schema({
   // Payment
   paymentMethod: {
     type: String,
-    enum: ['card', 'paypal', 'cash_on_delivery'],
+    enum: ['card','cash_on_delivery'],
     required: true
   },
   paymentStatus: {
@@ -73,31 +79,27 @@ const orderSchema = new mongoose.Schema({
   },
   paymentId: String,
   
-  // Order status
+
   status: {
     type: String,
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
   },
   
-  // Tracking
   trackingNumber: String,
   shippingProvider: String,
   
-  // Timestamps for status changes
   paidAt: Date,
   shippedAt: Date,
   deliveredAt: Date,
   cancelledAt: Date,
   
-  // Notes
   customerNotes: String,
   adminNotes: String
 }, { timestamps: true });
 
-// Indexes
-orderSchema.index({ user: 1, createdAt: -1 });
 
+orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
 
