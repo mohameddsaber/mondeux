@@ -9,6 +9,7 @@ import {
   fetchCart,
   getCartSubtotal
 } from '../utils/cartManager';
+import { Link } from 'react-router-dom';
 
 interface ShoppingCartPanelProps {
   isOpen: boolean;
@@ -26,7 +27,6 @@ export default function ShoppingCartPanel({
   const [packageProtection, setPackageProtection] = useState(true);
   const protectionPrice = 493.76;
 
-  // Subscribe to cart changes
   useEffect(() => {
     const loadCart = async () => {
         setLoading(true);
@@ -48,7 +48,6 @@ export default function ShoppingCartPanel({
     return unsubscribe;
   }, [isOpen]); 
 
-  // Update parent component when cart items change
   useEffect(() => {
     if (onCartUpdate) {
       const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -56,11 +55,8 @@ export default function ShoppingCartPanel({
     }
   }, [items, onCartUpdate]);
 
-  // 🎯 UPDATED to use productId, size, and material
   const handleUpdateQuantity = (item: CartItem, delta: number) => {
-    // The `item.id` is the CartItem's Mongoose _id, but the route uses the Product ID.
-    // Assuming your CartItem interface now correctly holds the 'productId'
-    // which refers to the Mongoose ObjectId of the Product model.
+
     updateCartItemQuantity(item.productId, item.size, item.material, delta);
   };
 
@@ -106,7 +102,6 @@ export default function ShoppingCartPanel({
               </div>
             ) : (
               items.map((item) => (
-                // Key now includes variant details for uniqueness
                 <div key={`${item.productId}-${item.size}-${item.material}`} className="flex items-start">
                   {/* Item Image */}
                   <img
@@ -183,7 +178,7 @@ export default function ShoppingCartPanel({
                     </button>
                   </div>
                 </div>
-                 {/* Carbon Neutral Shipping */}\
+                 {/* Carbon Neutral Shipping */}
                 <div className="border border-gray-200 p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-green-50 rounded-full flex items-center justify-center">
@@ -216,9 +211,13 @@ export default function ShoppingCartPanel({
                 VIEW CART
               </button>
               </a>
-              <button className="w-full py-4 bg-black text-white text-sm font-medium tracking-wider hover:bg-gray-800 transition-colors">
-                CHECK OUT
-              </button>
+              <Link to="/checkout">
+                <button className="w-full py-4 bg-black text-white text-sm font-medium tracking-wider hover:bg-gray-800 transition-colors">
+                  CHECK OUT
+                </button>              
+              </Link>
+
+
               <div className="text-center pt-2">
                 <button className="text-sm underline hover:no-underline">
                   Loyalty Scheme

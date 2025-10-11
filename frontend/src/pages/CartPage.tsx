@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Lock, Leaf, Minus, Plus, X } from 'lucide-react'; 
+import { Link } from 'react-router-dom';
 import { 
   type CartItem,
   getCartItems,
@@ -38,7 +39,7 @@ export default function CartPage() {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-white pt-24 pb-12 ">
+    <div className="min-h-screen bg-white pt-24 pb-12 mt-18">
       <div className="max-w-7xl mx-auto px-7.5 sm:px-6 lg:px-8">
         {/* Page Title */}
         <h1 className="text-3xl font-bold font-[Karla] tracking-wide uppercase mb-8">
@@ -84,7 +85,7 @@ export default function CartPage() {
                       <div className="flex items-center border border-gray-300 rounded-full h-8 overflow-hidden mb-2">
                         <button 
 
-onClick={() => handleUpdateQuantity(item.productId, item.size, item.material, -1)}
+                            onClick={() => handleUpdateQuantity(item.productId, item.size, item.material, -1)}
                             disabled={item.quantity <= 1}
                             className="p-2 h-full disabled:opacity-50 hover:bg-gray-100 transition-colors"
                         >
@@ -181,9 +182,12 @@ onClick={() => handleUpdateQuantity(item.productId, item.size, item.material, -1
                 </div>
 
                 {/* Checkout Button */}
-                <button className="w-full py-4 bg-black text-white text-sm font-medium tracking-wider hover:bg-gray-800 transition-colors">
-                  CHECK OUT
-                </button>
+               <Link to="/checkout"> 
+                  <button className="w-full py-4 bg-black text-white text-sm font-medium tracking-wider hover:bg-gray-800 transition-colors">
+                    CHECK OUT
+                  </button> 
+                </Link>
+
 
                 <div className="text-center pt-3">
                   <button className="text-sm underline hover:no-underline text-gray-600">
