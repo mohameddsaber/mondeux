@@ -39,7 +39,7 @@ export default function CartPage() {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-white pt-24 pb-12 mt-18">
+    <div className="min-h-screen bg-white pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-7.5 sm:px-6 lg:px-8">
         {/* Page Title */}
         <h1 className="text-3xl font-bold font-[Karla] tracking-wide uppercase mb-8">

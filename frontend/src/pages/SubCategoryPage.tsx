@@ -93,7 +93,7 @@ const SubCategoryPage: React.FC<SubCategoryPageProps> = ({ subCategorySlug }) =>
 
   return (
     <div className="min-h-screen bg-white">
-      <main className=" mt-[77px] md:mt-[130px]">
+      <main className=" ">
         <div className="text-center md:px-[80px] md:pt-[50px] md:pb-[20px] pt-[37.5px] px-[60px] pb-[15px] mb-6">
           <h2 className="md:text-[28px] text-[22px] font-ui text-[#121212] mb-3 -tracking-tight">
             Shop {pageTitle}

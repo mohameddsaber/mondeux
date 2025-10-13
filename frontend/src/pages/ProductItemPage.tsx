@@ -249,7 +249,7 @@ const ProductItemPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center pt-32">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center" >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
           <p className="text-gray-600">Loading product...</p>
@@ -260,7 +260,7 @@ const ProductItemPage: React.FC = () => {
 
   if (error && !addedToCart) { 
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center pt-32">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center ">
         <div className="text-center">
           <h1 className="text-6xl font-bold mb-4">Error</h1>
           <p className="text-xl mb-8 text-red-600">{error}</p>
@@ -280,8 +280,8 @@ const ProductItemPage: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 md:pt-22">
-      <main className="max-w-9xl mx-auto md:py-12 py-0"> {/* Added mx-auto here for centering */}
+    <div className="min-h-screen bg-gray-50 ">
+      <main className="max-w-9xl mx-auto"> 
         <div className="grid md:grid-cols-2 gap-10">
           {/* Product Image */}
           <div>
@@ -291,7 +291,7 @@ const ProductItemPage: React.FC = () => {
 
           {/* Product Info */}
           <div className="flex flex-col pt-15 px-[47px] xl:px-[80px]">
-            <h2 className="text-[24px] font-ui text-[#121212] mb-2">{product.name}</h2>
+            <h2 className="text-[24px] font-ui text-[#121212] mb-2">{product?.name}</h2>
             {/* Display the calculated final price */}
             <p className="text-[19px] text-gray-600 mb-6">LE {displayPrice.toFixed(2)}</p>
 
