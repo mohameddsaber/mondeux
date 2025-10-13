@@ -172,8 +172,21 @@ const SubCategoryPage: React.FC<SubCategoryPageProps> = ({ subCategorySlug }) =>
 
 
         {/* Product Display Area */}
-        {loading ? (
-            <div className="text-center p-8">Loading products...</div>
+       {loading ? (
+          <div className="grid grid-cols-2 p-[20px] md:grid-cols-4 gap-4 animate-pulse">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex flex-col space-y-3 rounded-lg overflow-hidden"
+              >
+                <div className="bg-gray-200 h-64 w-full rounded-lg"></div>
+                <div className="space-y-2 px-2">
+                  <div className="bg-gray-200 h-4 w-3/4 rounded"></div>
+                  <div className="bg-gray-200 h-4 w-1/2 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : error ? (
             <div className="text-center p-8 text-red-600">Error fetching products: {error}</div>
         ) : products.length === 0 ? (
