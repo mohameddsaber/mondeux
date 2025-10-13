@@ -1,17 +1,25 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, useParams } from "react-router-dom";
+import { Routes, Route, useParams, Navigate } from "react-router-dom";
 import Header from "./components/Header";
 import NavBar from "./components/NavBar";
 import ProductsPage from "./pages/ProductsPage";
 import HomePage from "./pages/HomePage";
 import ProductItemPage from "./pages/ProductItemPage";
 import CartPage from "./pages/CartPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import AuthPage from "./pages/AuthPage";
 import CategoryPage from "./pages/CategoryPage";
 import SubCategoryPage from "./pages/SubCategoryPage";
 import LoyaltyScheme from "./pages/LoyalityScheme";
 import LoyaltySchemeNoAuth from "./pages/LoyaltySchemeNoAuth";
-import { Award } from "lucide-react";
+import { Award} from "lucide-react";
+import Dashboard from "./pages/Admin/Dashboard";
+import Users from "./pages/Admin/Users";
+import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
+import ProductPage from "./pages/Admin/ProductPage";
+import OrderPage from "./pages/Admin/OrdersPage";
+import CategoriesPageAdmin from "./pages/Admin/CategoriesPage";
 
 const CategoryPageWrapper = () => {
     const { categorySlug } = useParams<{ categorySlug: string }>();
@@ -50,30 +58,117 @@ function App() {
     checkAuth();
   }, []);
 
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
+  
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const res = await fetch("http://localhost:4000/api/users/admin/all", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (err) {
+        setIsAdmin(false);
+        console.log(err);
+      } finally {
+        setIsCheckingAdmin(false);
+      }
+    };
+
+    checkAdmin();
+  }, []);
+      
+
   return (
     <>
       {/* Header */}
-      <div className="hidden md:block fixed top-0 left-0 right-0 z-50">
+      <div className="hidden md:block fixed top-0 left-0 right-0 z-50 ">
         <Header />
       </div>
 
       {/* Mobile Nav */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 ">
         <NavBar  />
       </div>
 
+      <div className="hidden md:block h-[160px] bg-[#f4f4f5]"></div>
+
+      <div className="md:hidden h-[70px bg-[#f4f4f5]"></div>
+
 
       {/* Routes */}
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/category/:categorySlug" element={<CategoryPageWrapper />} />
-        <Route path="/subcategory/:subCategorySlug" element={<SubCategoryPageWrapper />} />
-        <Route path="/products/:slug" element={<ProductItemPage />} />
+          <Routes>
+            {/* User-facing routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/category/:categorySlug" element={<CategoryPageWrapper />} />
+            <Route path="/subcategory/:subCategorySlug" element={<SubCategoryPageWrapper />} />
+            <Route path="/products/:slug" element={<ProductItemPage />} />
 
-      </Routes>
+            {/* Admin Routes */}
+
+            <Route 
+              path="/admin" 
+              element={
+                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+                  <Navigate to="/admin/dashboard" />
+                </ProtectedAdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/dashboard" 
+              element={
+                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+                  <Dashboard />
+                </ProtectedAdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/users" 
+              element={
+                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+                  <Users />
+                </ProtectedAdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/orders" 
+              element={
+                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+                  <OrderPage />
+                </ProtectedAdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/products" 
+              element={
+                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+                  <ProductPage />
+                </ProtectedAdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/categories" 
+              element={
+                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+                  <CategoriesPageAdmin />
+                </ProtectedAdminRoute>
+              } 
+            />
+          </Routes>
+
 
       {/* Loyalty Scheme Button */}
       <button
