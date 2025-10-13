@@ -11,6 +11,7 @@ import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import AuthPage from "./pages/AuthPage";
 import CategoryPage from "./pages/CategoryPage";
 import SubCategoryPage from "./pages/SubCategoryPage";
+import OrderHistoryPage from "./pages/OrderHistoryPage";
 import LoyaltyScheme from "./pages/LoyalityScheme";
 import LoyaltySchemeNoAuth from "./pages/LoyaltySchemeNoAuth";
 import { Award} from "lucide-react";
@@ -20,6 +21,8 @@ import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import ProductPage from "./pages/Admin/ProductPage";
 import OrderPage from "./pages/Admin/OrdersPage";
 import CategoriesPageAdmin from "./pages/Admin/CategoriesPage";
+import Footer from './components/Footer';
+import TestimonialsSection from "./components/TestimonialsSection";
 
 const CategoryPageWrapper = () => {
     const { categorySlug } = useParams<{ categorySlug: string }>();
@@ -99,9 +102,9 @@ function App() {
         <NavBar  />
       </div>
 
-      <div className="hidden md:block h-[160px] bg-[#f4f4f5]"></div>
+      <div className="hidden md:block h-[140px] bg-[#f4f4f5]"></div>
 
-      <div className="md:hidden h-[70px bg-[#f4f4f5]"></div>
+      <div className="md:hidden h-[76px] bg-[#f4f4f5]"></div>
 
 
       {/* Routes */}
@@ -116,6 +119,7 @@ function App() {
             <Route path="/category/:categorySlug" element={<CategoryPageWrapper />} />
             <Route path="/subcategory/:subCategorySlug" element={<SubCategoryPageWrapper />} />
             <Route path="/products/:slug" element={<ProductItemPage />} />
+            <Route path="/my-orders" element={<OrderHistoryPage />} />
 
             {/* Admin Routes */}
 
@@ -192,6 +196,8 @@ function App() {
         isOpen={isLoyaltyOpen}
         setIsOpen={setIsLoyaltyOpen}        
       />}
+      < TestimonialsSection />
+      <Footer />
     </>
   );
 }
