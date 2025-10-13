@@ -77,6 +77,7 @@ function Header() {
             </Link>
             <Link to="/subcategory/gold-rings" className="whitespace-nowrap hover:text-gray-600 transition">SHOP GOLD RINGS</Link>
             <Link to="/subcategory/silver-rings" className="whitespace-nowrap hover:text-gray-600 transition">SHOP SILVER RINGS</Link>
+            <Link to="/my-orders" className="whitespace-nowrap hover:text-gray-600 transition">MY ORDERS</Link>
           </nav>
         </div>
         

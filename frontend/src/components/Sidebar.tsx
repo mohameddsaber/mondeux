@@ -1,5 +1,5 @@
 import {  Search, Plus } from 'lucide-react';
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 import { Link } from 'react-router-dom';
 
 interface SidebarProps {
@@ -98,7 +98,7 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
         <nav>
           <ul className="space-y-0">
             {/* Modern Rodeo - Expandable */}
-            <li>
+            {/* <li>
               <button
                 onClick={() => toggleMenu("modern-rodeo")}
                 className={sidebarItem}
@@ -106,18 +106,18 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <span>MODERN RODEO</span>
                 <Plus className={getPlusStyling("modern-rodeo")} />
               </button>
-            </li>
+            </li> */}
 
             {/* New In */}
             <li>
-            <Link to="/products?sort=newest" className={sidebarLink}>
+            <Link to="/products?sort=newest" className={sidebarLink} onClick={onClose}>
               NEW IN
             </Link>            
             </li>
 
             {/* Best Sellers */}
             <li>
-            <Link to="/products?sort=best-selling" className={sidebarLink}>
+            <Link to="/products?sort=best-selling" className={sidebarLink} onClick={onClose}>
               BEST SELLERS
             </Link>              
             </li>
@@ -139,11 +139,11 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
               {expandedMenus["shop-all"] && (
                 <ul className={submenu}>
-                  <li><Link to="/products" className={submenuLink}>All Jewelry</Link></li>
-                  <li><Link to="/category/rings" className={submenuLink}>Shop Rings</Link></li>
-                  <li><Link to="/category/bracelets" className={submenuLink}>Shop Bracelets</Link></li>
-                  <li><Link to="/category/necklaces" className={submenuLink}>Shop Necklaces</Link></li>
-                  <li><Link to="/category/wallets" className={submenuLink}>Shop Wallets</Link></li>
+                  <li><Link to="/products" className={submenuLink} onClick={onClose}>All Jewelry</Link></li>
+                  <li><Link to="/category/rings" className={submenuLink} onClick={onClose}>Shop Rings</Link></li>
+                  <li><Link to="/category/bracelets" className={submenuLink} onClick={onClose}>Shop Bracelets</Link></li>
+                  <li><Link to="/category/necklaces" className={submenuLink} onClick={onClose}>Shop Necklaces</Link></li>
+                  <li><Link to="/category/wallets" className={submenuLink} onClick={onClose}>Shop Wallets</Link></li>
                 </ul>
               )}
             </li>
@@ -160,9 +160,9 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               {expandedMenus["rings"] && (
                 <ul className={submenu}>
-                  <li><Link to="category/rings" className={submenuLink}>All Rings</Link></li>
-                  <li><Link to="subcategory/silver-rings" className={submenuLink}>Silver Rings</Link></li>
-                  <li><Link to="subcategory/gold-rings" className={submenuLink}>Gold Rings</Link></li>
+                  <li><Link to="category/rings" className={submenuLink} onClick={onClose}>All Rings</Link></li>
+                  <li><Link to="subcategory/silver-rings" className={submenuLink} onClick={onClose}>Silver Rings</Link></li>
+                  <li><Link to="subcategory/gold-rings" className={submenuLink} onClick={onClose}>Gold Rings</Link></li>
                   {/* <li><Link to="#" className={submenuLink}>Statement Rings</Link></li>
                   <li><Link to="#" className={submenuLink}>Stone Rings</Link></li>
                   <li><Link to="#" className={submenuLink}>Signet Rings</Link></li> */}
@@ -181,9 +181,9 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
               {expandedMenus["necklaces"] && (
                 <ul className={submenu}>
-                  <li><Link to="/category/necklaces" className={submenuLink}>All Necklaces</Link></li>
-                  <li><Link to="subcategory/silver-necklaces" className={submenuLink}>Silver Necklaces</Link></li>
-                  <li><Link to="subcategory/gold-necklaces" className={submenuLink}>Gold Necklaces</Link></li>
+                  <li><Link to="/category/necklaces" className={submenuLink} onClick={onClose}>All Necklaces</Link></li>
+                  <li><Link to="subcategory/silver-necklaces" className={submenuLink} onClick={onClose}>Silver Necklaces</Link></li>
+                  <li><Link to="subcategory/gold-necklaces" className={submenuLink} onClick={onClose}>Gold Necklaces</Link></li>
                   {/* <li><a href="#" className={submenuLink}>Pendant Necklaces</a></li>
                   <li><a href="#" className={submenuLink}>Chain Necklaces</a></li> */}
                 </ul>
@@ -201,9 +201,9 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
               {expandedMenus["bracelets"] && (
                 <ul className={submenu}>
-                  <li><Link to="/category/bracelets" className={submenuLink}>All Bracelets</Link></li>
-                  <li><Link to="/subcategory/silver-bracelets" className={submenuLink}>Silver Bracelets</Link></li>
-                  <li><Link to="/subcategory/gold-bracelets" className={submenuLink}>Gold Bracelets</Link></li>
+                  <li><Link to="/category/bracelets" className={submenuLink} onClick={onClose}>All Bracelets</Link></li>
+                  <li><Link to="/subcategory/silver-bracelets" className={submenuLink} onClick={onClose}>Silver Bracelets</Link></li>
+                  <li><Link to="/subcategory/gold-bracelets" className={submenuLink} onClick={onClose}>Gold Bracelets</Link></li>
                   {/* <li><a href="#" className={submenuLink}>Cuff Bracelets</a></li> */}
                 </ul>
               )}
@@ -220,9 +220,9 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
               {expandedMenus["wallets"] && (
                 <ul className={submenu}>
-                  <li><a href="#" className={submenuLink}>All Wallets</a></li>
-                  <li><a href="#" className={submenuLink}>Slim Wallets</a></li>
-                  <li><a href="#" className={submenuLink}>Card Holders</a></li>
+                  <li><a href="#" className={submenuLink} onClick={onClose}>All Wallets</a></li>
+                  <li><a href="#" className={submenuLink} onClick={onClose}>Slim Wallets</a></li>
+                  <li><a href="#" className={submenuLink} onClick={onClose}>Card Holders</a></li>
                 </ul>
               )}
             </li>
@@ -238,9 +238,12 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
               {expandedMenus["accessories"] && (
                 <ul className={submenu}>
-                  <li><a href="#" className={submenuLink}>All Accessories</a></li>
+                  <li><a href="/products" className={submenuLink} onClick={onClose}>All Accessories</a></li>
                 </ul>
               )}
+            </li>
+            <li className={sidebarItem}>
+              <Link to="/my-orders" className="" onClick={onClose}>MY ORDERS</Link>
             </li>
 
           </ul>
