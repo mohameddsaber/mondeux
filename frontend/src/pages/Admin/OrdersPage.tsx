@@ -80,10 +80,11 @@ export default function OrderPage() {
       }
     } catch (err) {
       toast.error("Error updating status");
+      console.error(err);
     }
   };
 
-  // ✅ Update payment status
+  //  Update payment status
   const handlePaymentStatusChange = async (orderId: string, newPaymentStatus: string) => {
     try {
       const res = await fetch(`http://localhost:4000/api/orders/${orderId}/payment-status`, {
@@ -101,6 +102,7 @@ export default function OrderPage() {
       }
     } catch (err) {
       toast.error("Error updating payment status");
+      console.error(err);
     }
   };
 
