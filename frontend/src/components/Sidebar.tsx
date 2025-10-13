@@ -1,5 +1,5 @@
 import {  Search, Plus } from 'lucide-react';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from 'react-router-dom';
 
 interface SidebarProps {
@@ -41,9 +41,9 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
     const data = await res.json();
 
     if (res.ok) {
-
       console.log("Logged out successfully");
-      window.location.href = "//auth?mode=login"; 
+      window.location.reload();
+
     } else {
       console.error(data.message || "Logout failed");
     }
@@ -51,6 +51,7 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
     console.error("Error logging out:", error);
   }
 };
+
 
 
   return (
