@@ -1,6 +1,7 @@
 import Order from '../models/order.model.js';
 import Cart from '../models/cart.model.js';
 import Product from '../models/product.model.js';
+`import Sale from '../models/sales.model.js';`
 
 export const getMyOrders = async (req, res) => {
   try {
@@ -130,8 +131,8 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      const variantImage = materialVariant.images?.[0]?.url || 
-                          product.materialVariants[0]?.images?.[0]?.url || 
+      const variantImage = product.images?.[0]?.url || 
+                          product.images?.[0]?.url || 
                           '';
 
       orderItems.push({
@@ -315,6 +316,14 @@ export const updateOrderStatus = async (req, res) => {
       order.deliveredAt = new Date();
       order.paymentStatus = 'paid';
       order.paidAt = new Date();
+        for (const item of order.items) {
+          await Sale.create({
+            productId: item.product._id,
+            quantity: item.quantity,
+            totalAmount: item.quantity * item.price,
+          });
+        }
+      
     }
 
     await order.save();
