@@ -63,32 +63,40 @@ export default function OrderPage() {
   }, []);
 
   // ✅ Update delivery/status
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
-    try {
-      const res = await fetch(`http://localhost:4000/api/orders/${orderId}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status: newStatus }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Order status updated!");
-        fetchOrders();
-      } else {
-        toast.error(data.message || "Failed to update status");
-      }
-    } catch (err) {
-      toast.error("Error updating status");
-      console.error(err);
+const handleStatusChange = async (orderId: string, newStatus: string) => {
+  try {
+    const response = await fetch(`http://localhost:4000/api/orders/${orderId}/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include", // include cookies if using auth
+      body: JSON.stringify({ status: newStatus }), // body must contain 'status'
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      // show more descriptive error if available
+      throw new Error(data.message || "Failed to update order status");
     }
-  };
+
+    // ✅ Success case
+    toast.success(`Order status updated to "${newStatus}"`);
+    fetchOrders(); // Refresh the order list after update
+
+  } catch (error: any) {
+    console.error("Error updating order status:", error);
+    toast.error(error.message || "Error updating status");
+  }
+};
+
 
   //  Update payment status
   const handlePaymentStatusChange = async (orderId: string, newPaymentStatus: string) => {
     try {
       const res = await fetch(`http://localhost:4000/api/orders/${orderId}/payment-status`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ paymentStatus: newPaymentStatus }),
