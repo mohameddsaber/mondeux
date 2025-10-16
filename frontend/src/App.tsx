@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, useParams, Navigate } from "react-router-dom";
+import { Routes, Route, useParams, Navigate, useNavigate } from "react-router-dom";
 import Header from "./components/Header";
 import NavBar from "./components/NavBar";
 import ProductsPage from "./pages/ProductsPage";
@@ -23,6 +23,7 @@ import OrderPage from "./pages/Admin/OrdersPage";
 import CategoriesPageAdmin from "./pages/Admin/CategoriesPage";
 import Footer from './components/Footer';
 import TestimonialsSection from "./components/TestimonialsSection";
+import HeaderAdmin from "./components/HeaderAdmin";
 
 const CategoryPageWrapper = () => {
     const { categorySlug } = useParams<{ categorySlug: string }>();
@@ -41,7 +42,7 @@ function App() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/users/profile", {
+        const res = await fetch("http://localhost:4000/api/users/me", {
           method: "GET",
           credentials: "include",
         });
@@ -63,11 +64,12 @@ function App() {
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
+  const navigate = useNavigate();
   
   useEffect(() => {
     const checkAdmin = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/users/admin/all", {
+        const res = await fetch("http://localhost:4000/api/users/admin", {
           method: "GET",
           credentials: "include",
         });
@@ -75,6 +77,10 @@ function App() {
         const data = await res.json();
         if (res.ok && data.success) {
           setIsAdmin(true);
+          if (location.pathname === "/"||location.pathname === "/auth") {
+            navigate("/admin/dashboard");
+          }        
+        
         } else {
           setIsAdmin(false);
         }
@@ -93,19 +99,26 @@ function App() {
   return (
     <>
       {/* Header */}
-      <div className="hidden md:block fixed top-0 left-0 right-0 z-50 ">
-        <Header />
+   {isAdmin  ? (
+      <>
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <HeaderAdmin />
       </div>
+      <div className="md:hidden h-[110px] bg-[#f4f4f5]"></div>
+      </>
+    ) : isCheckingAdmin ? null : (
+      <>
+        <div className="hidden md:block fixed top-0 left-0 right-0 z-50">
+          <Header />
 
-      {/* Mobile Nav */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 ">
-        <NavBar  />
-      </div>
-
+        </div>
+        <div className="md:hidden fixed top-0 left-0 right-0 z-50">
+          <NavBar />
+        </div>
+        <div className="md:hidden h-[76px] bg-[#f4f4f5]"></div>
+      </>
+    )}
       <div className="hidden md:block h-[140px] bg-[#f4f4f5]"></div>
-
-      <div className="md:hidden h-[76px] bg-[#f4f4f5]"></div>
-
 
       {/* Routes */}
           <Routes>
