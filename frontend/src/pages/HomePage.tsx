@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom'; // 1. Import useNavigate
-
+import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 // Product and variant interfaces
 interface SizeVariant {
@@ -67,12 +67,12 @@ interface CategorySectionProps {
   onViewAllClick?: () => void;
 }
 
-const CategorySection = ({ 
-  categoryName, 
-  categoryImage, 
+const CategorySection = ({
+  categoryName,
+  categoryImage,
   categorySlug,
   onCategoryClick,
-  onViewAllClick 
+  onViewAllClick
 }: CategorySectionProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,11 +83,11 @@ const CategorySection = ({
       try {
         const endpoint = `http://localhost:4000/api/products/category/${categorySlug}?limit=4`;
         const response = await fetch(endpoint);
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
         setProducts(result.data || []);
       } catch (error) {
@@ -102,12 +102,19 @@ const CategorySection = ({
   }, [categorySlug, categoryName]);
 
   return (
-    <section className="py-12 px-4 md:px-8">
+    <motion.section
+      className="py-12 px-4 md:px-8"
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
+    >
       <div className="max-w-7xl mx-auto">
         {/* Category Header with Image */}
-        <div 
+        <motion.div
           onClick={onCategoryClick}
           className="block relative h-70 md:h-110 mb-8 overflow-hidden rounded-lg group cursor-pointer"
+          whileHover={{ scale: 1.02 }}
         >
           <img
             src={categoryImage}
@@ -125,7 +132,7 @@ const CategorySection = ({
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Products Grid */}
         {loading ? (
@@ -139,11 +146,31 @@ const CategorySection = ({
             ))}
           </div>
         ) : products.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <motion.div
+            className="grid grid-cols-2 md:grid-cols-4 gap-6"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.1 } },
+            }}
+          >
             {products.map((product) => (
-              <Link to={`/products/${product.slug}`} key={product._id}><ProductCard product={product} /></Link>
+              <motion.div
+                key={product._id}
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                <Link to={`/products/${product.slug}`}>
+                  <ProductCard product={product} />
+                </Link>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         ) : (
           <div className="text-center py-12 text-gray-500">
             No products available in this category yet.
@@ -153,35 +180,37 @@ const CategorySection = ({
         {/* View All Link */}
         {products.length > 0 && (
           <div className="mt-8 text-center">
-            <button
+            <motion.button
               onClick={onViewAllClick}
               className="inline-flex items-center gap-2 text-sm border-b border-black pb-1 hover:text-gray-600 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               View All {categoryName} <ArrowRight size={16} />
-            </button>
+            </motion.button>
           </div>
         )}
       </div>
-    </section>
+    </motion.section>
   );
 };
 
-// Example Usage in HomePage
+// HomePage Component
 export default function HomePage() {
   const categories = [
     { name: 'Rings', slug: 'rings', image: 'https://saltydagger.com/cdn/shop/files/YETZ_98of180.jpg?v=1758541739' },
     { name: 'Necklaces', slug: 'necklaces', image: 'https://saltydagger.com/cdn/shop/files/YETZ_72of180_70fadd73-eeb4-4c60-acc0-0665f8766804.jpg?v=1758645249' },
     { name: 'Bracelets', slug: 'bracelets', image: 'https://saltydagger.com/cdn/shop/files/YETZ_161of180.jpg?v=1758541990' },
   ];
-    
-    const navigate = useNavigate();
-    const handleCategoryClick = (slug: string) => {
-    navigate(`/category/${slug}`); // 3. Use navigate to change the URL
+
+  const navigate = useNavigate();
+
+  const handleCategoryClick = (slug: string) => {
+    navigate(`/category/${slug}`);
   };
 
-  // Function to handle view all navigation
   const handleViewAllClick = (slug: string) => {
-    navigate(`/category/${slug}`); // Assuming 'View All' also goes to the category page
+    navigate(`/category/${slug}`);
   };
 
   return (
@@ -196,15 +225,31 @@ export default function HomePage() {
           />
         </div>
         <div className="relative flex flex-col items-center justify-center h-full text-white text-center px-4">
-          <h1 className="text-4xl md:text-6xl font-light mb-6 tracking-wider">
+          <motion.h1
+            className="text-4xl md:text-6xl font-light mb-6 tracking-wider"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
             TIMELESS ELEGANCE
-          </h1>
-          <p className="text-lg md:text-xl mb-8 max-w-2xl">
+          </motion.h1>
+
+          <motion.p
+            className="text-lg md:text-xl mb-8 max-w-2xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+          >
             Discover our collection of pieces that tell your unique story.
-          </p>
-          <button className="bg-white text-black px-8 py-3 text-sm tracking-wider hover:bg-gray-100 transition-colors">
+          </motion.p>
+
+          <motion.button
+            className="bg-white text-black px-8 py-3 text-sm tracking-wider hover:bg-gray-100 transition-colors"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
             SHOP NOW
-          </button>
+          </motion.button>
         </div>
       </section>
 
@@ -216,7 +261,7 @@ export default function HomePage() {
             categoryImage={category.image}
             categorySlug={category.slug}
             onCategoryClick={() => handleCategoryClick(category.slug)}
-            onViewAllClick={() => handleViewAllClick(category.slug)} 
+            onViewAllClick={() => handleViewAllClick(category.slug)}
           />
           {index < categories.length - 1 && (
             <div className="max-w-7xl mx-auto px-4 md:px-8">
@@ -227,7 +272,13 @@ export default function HomePage() {
       ))}
 
       {/* Newsletter Section */}
-      <section className="bg-black text-white py-16 px-4 md:px-8 mt-12">
+      <motion.section
+        className="bg-black text-white py-16 px-4 md:px-8 mt-12"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-2xl md:text-3xl mb-6 font-light tracking-wider">
             JOIN THE MONDEUX FAMILY
@@ -241,12 +292,16 @@ export default function HomePage() {
               placeholder="Enter your email"
               className="flex-1 px-4 py-3 text-black"
             />
-            <button className="bg-white text-black px-6 py-3 text-sm tracking-wider hover:bg-gray-100 transition-colors">
+            <motion.button
+              className="bg-white text-black px-6 py-3 text-sm tracking-wider hover:bg-gray-100 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               SUBSCRIBE
-            </button>
+            </motion.button>
           </div>
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 }
