@@ -152,7 +152,7 @@ const { summary, salesData, recentOrders, totalUsers, totalProducts, totalCatego
   const totalRevenue = summary?.totalRevenue || 0;
   const totalUnitsSold = summary?.totalUnitsSold || 0;
   const growthRate = 0.15;
-
+console.log(salesData);
   const chartData = salesData.map((d) => ({
     date: new Date(d._id).toLocaleDateString('en-US', {
       month: 'short',
@@ -172,7 +172,7 @@ const { summary, salesData, recentOrders, totalUsers, totalProducts, totalCatego
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-gray-100 ">
-      <main className="flex flex-1 flex-col gap-8 p-6 md:p-10">
+      <main className="flex flex-1 flex-col gap-8 p-3 md:p-10">
         {/* Header */}
         <header>
           <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
@@ -246,8 +246,10 @@ const { summary, salesData, recentOrders, totalUsers, totalProducts, totalCatego
         </div>
 
         {/* Chart + Recent Orders */}
-        <div className="grid gap-6 lg:grid-cols-7">
-          <Card className="col-span-4 shadow-sm border-gray-200">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
+          
+          {/* Sales Over Time Chart */}
+          <Card className="col-span-1 md:col-span-2 lg:col-span-4 shadow-sm border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-gray-700">
                 Sales Over Time
@@ -269,7 +271,8 @@ const { summary, salesData, recentOrders, totalUsers, totalProducts, totalCatego
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(v) => `LE ${v / 1000}k`}
+                    // Use a smaller formatter for better mobile display, or reduce the number of ticks
+                    tickFormatter={(v) => `LE ${v / 1000}k`} 
                   />
                   <Tooltip
                     formatter={(v) => [formatCurrency(Number(v)), 'Revenue']}
@@ -288,42 +291,49 @@ const { summary, salesData, recentOrders, totalUsers, totalProducts, totalCatego
             </CardContent>
           </Card>
 
-          <Card className="col-span-3 shadow-sm border-gray-200">
+          {/* Recent Orders Table */}
+          <Card className="col-span-1 md:col-span-2 lg:col-span-3 shadow-sm border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-gray-700">
                 Recent Orders
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead className="text-right">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentOrders.map((order) => (
-                    <TableRow key={order._id}>
-                      <TableCell>
-                        <div className="font-medium text-gray-800">
-                          {order.user.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {order.user.email}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-semibold text-gray-700">
-                        {formatCurrency(order.totalAmount)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {getStatusBadge(order.status)}
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      {/* Optional: Add a small screen class to TableHead to reduce padding/size */}
+                      <TableHead className="min-w-[120px]">Customer</TableHead> 
+                      <TableHead>Amount</TableHead>
+                      <TableHead className="text-right">Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {recentOrders.map((order) => (
+                      <TableRow key={order._id}>
+                        <TableCell>
+                          {/* CRITICAL FIXES: Added max-w-xs and truncate to manage long text */}
+                          <div className="max-w-[120px] sm:max-w-[150px]"> 
+                              <div className="font-medium text-gray-800 truncate"> 
+                                {order.user.name}
+                              </div>
+                              <div className="text-sm text-gray-500 truncate">
+                                {order.user.email}
+                              </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-semibold text-gray-700">
+                          {formatCurrency(order.totalAmount)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {getStatusBadge(order.status)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </div>
