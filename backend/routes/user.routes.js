@@ -13,7 +13,9 @@ import {
   deleteAddress,
   getAllUsers,
   getUserById,
-  deleteUser
+  deleteUser,
+  isAuthenticated,
+  isAdmin
 } from '../controllers/user.controllers.js';
 import { protect, admin } from '../middleware/auth.js';
 
@@ -22,6 +24,8 @@ const router = express.Router();
 // Public routes
 router.post('/register', register);
 router.post('/login', login);
+
+
 
 // Protected routes
 router.get('/profile', protect, getUserProfile);
@@ -42,5 +46,14 @@ router.delete('/addresses/:addressId', protect, deleteAddress);
 router.get('/admin/all', protect, admin, getAllUsers);
 router.get('/admin/:id', protect, admin, getUserById);
 router.delete('/admin/:id', protect, admin, deleteUser);
+
+
+
+router.get('/me', isAuthenticated, (req, res) => {
+  res.json({ success: true, user: req.user });
+});
+router.get('/admin', isAdmin, (req, res) => {
+  res.json({ success: true, message: "Welcome, Admin!" });
+});
 
 export default router;

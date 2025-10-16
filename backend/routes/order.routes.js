@@ -1,6 +1,6 @@
 import express from 'express';
 
-import { getMyOrders, getOrderById, createOrder, cancelOrder, getAllOrders, updateOrderStatus, updateShippingInfo } from '../controllers/order.controllers.js';
+import { getMyOrders, getOrderById, createOrder, cancelOrder, getAllOrders, updateOrderStatus, updateShippingInfo, updatePaymentStatus } from '../controllers/order.controllers.js';
 import  { protect, admin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -13,6 +13,7 @@ router.patch('/:id/cancel', protect, cancelOrder);
 // Admin routes
 router.get('/admin/all', protect, admin, getAllOrders);
 router.patch('/:id/status', protect, admin, updateOrderStatus);
+router.patch('/:id/payment-status', protect, admin, updatePaymentStatus);
 router.patch('/:id/shipping', protect, admin, updateShippingInfo);
 
 export default router;

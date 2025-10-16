@@ -14,6 +14,7 @@ import productRoutes from './routes/product.routes.js';
 import cartRoutes from './routes/cart.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import userRoutes from './routes/user.routes.js';
+import salesRoutes from './routes/sales.routes.js';
 
 
 dotenv.config();
@@ -22,8 +23,8 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // your frontend URL
-  credentials: true, // 👈 allow sending cookies
+  origin: 'http://localhost:5173',
+  credentials: true, 
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -36,6 +37,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/sales', salesRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

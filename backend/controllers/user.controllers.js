@@ -1,7 +1,26 @@
 import User from '../models/user.model.js';
 import bcrypt from 'bcryptjs';
 import { generateTokenAndSetCookie } from '../utils/generateToken.js';
+import { protect, admin } from '../middleware/auth.js';
 
+
+export const isAuthenticated = [
+  protect,
+  (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
+    next();
+  },
+];
+
+export const isAdmin = [
+  protect,
+  admin,
+];
 
 export const register = async (req, res) => {
   try {

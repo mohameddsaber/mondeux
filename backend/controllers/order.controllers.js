@@ -1,7 +1,7 @@
 import Order from '../models/order.model.js';
 import Cart from '../models/cart.model.js';
 import Product from '../models/product.model.js';
-`import Sale from '../models/sales.model.js';`
+import Sale from '../models/sales.model.js';
 
 export const getMyOrders = async (req, res) => {
   try {
@@ -295,6 +295,33 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
+export const updateShippingInfo = async (req, res) => {
+  try {
+    const { trackingNumber, shippingProvider } = req.body;
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    if (trackingNumber) order.trackingNumber = trackingNumber;
+    if (shippingProvider) order.shippingProvider = shippingProvider;
+
+    await order.save();
+
+    res.json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 export const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -337,29 +364,60 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
-export const updateShippingInfo = async (req, res) => {
-  try {
-    const { trackingNumber, shippingProvider } = req.body;
 
-    const order = await Order.findById(req.params.id);
+
+export const updatePaymentStatus = async (req, res) => {
+  try {
+    const { paymentStatus } = req.body;
+    const { id } = req.params;
+
+    const order = await Order.findById(id);
 
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found'
+        message: "Order not found",
       });
     }
 
-    if (trackingNumber) order.trackingNumber = trackingNumber;
-    if (shippingProvider) order.shippingProvider = shippingProvider;
+    // Track previous status
+    const previousStatus = order.paymentStatus;
+
+    order.paymentStatus = paymentStatus;
+
+    // If payment marked as paid and wasn’t before — add sales
+    if (paymentStatus === "paid" && previousStatus !== "paid") {
+      order.paidAt = new Date();
+
+      for (const item of order.items) {
+        await Sale.create({
+          productId: item.product._id,
+          quantity: item.quantity,
+          totalAmount: item.quantity * item.price,
+          date: new Date(),
+        });
+      }
+    }
+
+    // If payment is now unpaid or refunded — remove sales
+    if (['pending', 'failed', 'refunded'].includes(paymentStatus) && previousStatus === "paid") {
+      for (const item of order.items) {
+        await Sale.deleteMany({ productId: item.product._id });
+      }
+      order.paidAt = null; // clear the payment timestamp
+    }
 
     await order.save();
 
-    res.json({
+    res.status(200).json({
       success: true,
-      data: order
+      data: order,
     });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    console.error("Error updating payment status:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
