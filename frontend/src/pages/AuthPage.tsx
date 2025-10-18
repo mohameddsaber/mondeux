@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
 import {fetchCart} from '../utils/cartManager';
 
-export default function AuthPage() {
+export default function AuthPage( isAdmin: boolean ) {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const mode = params.get("mode");
@@ -18,7 +18,7 @@ export default function AuthPage() {
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {isLogin ? (
-          <LoginForm onToggle={() => setIsLogin(false)} />
+          <LoginForm isAdmin={isAdmin} onToggle={() => setIsLogin(false)} />
         ) : (
           <SignupForm onToggle={() => setIsLogin(true)} />
         )}
@@ -29,7 +29,7 @@ export default function AuthPage() {
 
 
 // Login Component
-function LoginForm({ onToggle }) {
+function LoginForm({ onToggle, isAdmin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -66,8 +66,12 @@ function LoginForm({ onToggle }) {
             }
         
         
-        // Redirect or update app state here
-        window.location.href = '/';
+       if (isAdmin) {
+          window.location.href = '/admin/dashboard';
+        } else {
+          window.location.href = '/';
+        }
+
       } else {
         setError(data.message || 'Login failed');
       }

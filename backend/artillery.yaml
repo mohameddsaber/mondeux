@@ -1,0 +1,15 @@
+# artillery.yaml
+config:
+  target: "http://localhost:4000"  # <-- Make sure this matches your backend URL
+  phases:
+    - duration: 60
+      arrivalRate: 10
+  defaults:
+    headers:
+      Accept: "application/json"
+
+scenarios:
+  - name: "Get all products"
+    flow:
+      - get:
+          url: "/api/products"  # <-- your GET all products endpoint

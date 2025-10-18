@@ -19,5 +19,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.3"
+  },
+  "devDependencies": {
+    "artillery": "^2.0.26"
   }
 }
