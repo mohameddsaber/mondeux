@@ -5,6 +5,7 @@ import ProductImageSlider from '../components/ProductImageSlider.tsx';
 import ProductAccordian from '../components/ProductAccordian.tsx';
 import RelatedProducts from '../components/RelatedProducts.tsx';
 import TrustBadges from '../components/TrustBadges.tsx';
+import WishlistButton from '../components/WishlistButton.tsx';
 import { getApiErrorMessage } from '../lib/api';
 import { useAddToCartMutation, useProductDetailQuery } from '../hooks/useStoreData';
 import { trackClientEvent } from '../lib/analytics';
@@ -301,7 +302,10 @@ const ProductItemPage: React.FC = () => {
 
           {/* Product Info */}
           <div className="flex flex-col pt-15 px-[47px] xl:px-[80px]">
-            <h2 className="text-[24px] font-ui text-[#121212] mb-2">{product?.name}</h2>
+            <div className="mb-2 flex items-start justify-between gap-4">
+              <h2 className="text-[24px] font-ui text-[#121212]">{product?.name}</h2>
+              <WishlistButton productId={product!._id} className="shrink-0" />
+            </div>
             {/* Display the calculated final price */}
             <p className="text-[19px] text-gray-600 mb-6">LE {displayPrice.toFixed(2)}</p>
 

@@ -1,5 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
+import WishlistButton from "@/components/WishlistButton";
+import { formatProductPriceRange } from "@/lib/productPricing";
 
 export interface SizeVariant {
   label: string;
@@ -36,6 +38,7 @@ export interface Product {
   metaDescription?: string;
   createdAt: string;
   updatedAt: string;
+  minVariantPrice?: number;
 }
 
 interface ProductCardProps {
@@ -58,10 +61,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
     >
       {/* Image */}
       <motion.div 
-        className="bg-gray-100 aspect-square mb-4 overflow-hidden rounded"
+        className="bg-gray-100 aspect-square mb-4 overflow-hidden rounded relative"
         whileHover={{ scale: 1.02 }}
         transition={{ duration: 0.3 }}
       >
+        <div className="absolute right-3 top-3 z-10">
+          <WishlistButton productId={product._id} />
+        </div>
         <motion.img
           src={product.images[0].url}
           alt={product.name}
@@ -88,7 +94,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
         animate={{ opacity: 1 }}
         transition={{ delay: index * 0.1 + 0.3 }}
       >
-        {product.materialVariants[0]?.price} LE
+        {formatProductPriceRange(product)}
       </motion.p>
     </motion.div>
   );

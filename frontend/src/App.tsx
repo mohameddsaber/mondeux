@@ -12,6 +12,7 @@ import AuthPage from "./pages/AuthPage";
 import CategoryPage from "./pages/CategoryPage";
 import SubCategoryPage from "./pages/SubCategoryPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
+import WishlistPage from "./pages/WishlistPage";
 import LoyaltyScheme from "./pages/LoyalityScheme";
 import LoyaltySchemeNoAuth from "./pages/LoyaltySchemeNoAuth";
 import { Award} from "lucide-react";
@@ -91,6 +92,7 @@ function App() {
             <Route path="/subcategory/:subCategorySlug" element={<SubCategoryPageWrapper />} />
             <Route path="/products/:slug" element={<ProductItemPage />} />
             <Route path="/my-orders" element={<OrderHistoryPage />} />
+            <Route path="/wishlist" element={<WishlistPage />} />
 
             {/* Admin Routes */}
 

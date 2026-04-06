@@ -388,6 +388,31 @@ interface ServerCartResponse {
   };
 }
 
+export interface WishlistItem {
+  _id: string;
+  name: string;
+  slug: string;
+  images: { url: string; alt?: string; isPrimary?: boolean }[];
+  rating: number;
+  category: { name: string; slug: string } | null;
+  subCategory: { name: string; slug: string } | null;
+  materialVariants: ProductDetails["materialVariants"];
+  minVariantPrice: number;
+  totalStock: number;
+  lowStockThreshold: number;
+  savedPrice: number;
+  addedAt: string | null;
+  isLowStock: boolean;
+  isOutOfStock: boolean;
+  priceDropped: boolean;
+  priceDropAmount: number;
+}
+
+type WishlistResponse = {
+  success: boolean;
+  data: WishlistItem[];
+};
+
 export interface LoyaltyTier {
   id: string;
   name: string;
@@ -564,6 +589,14 @@ const invalidateCartQueries = async (queryClient: ReturnType<typeof useQueryClie
   });
 };
 
+const invalidateWishlistQueries = async (
+  queryClient: ReturnType<typeof useQueryClient>
+) => {
+  await queryClient.invalidateQueries({
+    queryKey: queryKeys.wishlist.detail,
+  });
+};
+
 const invalidateLoyaltyQueries = async (
   queryClient: ReturnType<typeof useQueryClient>
 ) => {
@@ -619,6 +652,7 @@ export const useLoginMutation = () => {
         }),
         invalidateCartQueries(queryClient),
         invalidateLoyaltyQueries(queryClient),
+        invalidateWishlistQueries(queryClient),
       ]);
     },
   });
@@ -643,6 +677,7 @@ export const useRegisterMutation = () => {
         }),
         invalidateCartQueries(queryClient),
         invalidateLoyaltyQueries(queryClient),
+        invalidateWishlistQueries(queryClient),
       ]);
     },
   });
@@ -663,6 +698,7 @@ export const useLogoutMutation = () => {
         }),
         invalidateCartQueries(queryClient),
         invalidateLoyaltyQueries(queryClient),
+        invalidateWishlistQueries(queryClient),
       ]);
     },
   });
@@ -742,6 +778,69 @@ export const useCartQuery = () =>
     },
     initialData: [],
   });
+
+export const useWishlistQuery = () =>
+  useQuery({
+    queryKey: queryKeys.wishlist.detail,
+    queryFn: async () => {
+      try {
+        const result = await apiRequest<WishlistResponse>("/users/wishlist");
+        return result.data;
+      } catch (error: unknown) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "status" in error &&
+          (error.status === 401 || error.status === 403)
+        ) {
+          return [];
+        }
+
+        throw error;
+      }
+    },
+    initialData: [],
+  });
+
+export const useWishlistSummary = () => {
+  const wishlistQuery = useWishlistQuery();
+  const items = wishlistQuery.data || [];
+
+  return {
+    ...wishlistQuery,
+    items,
+    totalItems: items.length,
+    productIds: new Set(items.map((item) => item._id)),
+  };
+};
+
+export const useAddToWishlistMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (productId: string) =>
+      apiRequest<WishlistResponse>(`/users/wishlist/${productId}`, {
+        method: "POST",
+      }),
+    onSuccess: async () => {
+      await invalidateWishlistQueries(queryClient);
+    },
+  });
+};
+
+export const useRemoveFromWishlistMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (productId: string) =>
+      apiRequest<WishlistResponse>(`/users/wishlist/${productId}`, {
+        method: "DELETE",
+      }),
+    onSuccess: async () => {
+      await invalidateWishlistQueries(queryClient);
+    },
+  });
+};
 
 export const useCartSummary = () => {
   const cartQuery = useCartQuery();

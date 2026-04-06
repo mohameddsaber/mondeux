@@ -2,6 +2,8 @@ import { ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCategoryProductsQuery } from '../hooks/useStoreData';
+import WishlistButton from '../components/WishlistButton';
+import { formatProductPriceRange } from '../lib/productPricing';
 
 // Product and variant interfaces
 interface SizeVariant {
@@ -39,13 +41,17 @@ interface Product {
   metaDescription?: string;
   createdAt: string;
   updatedAt: string;
+  minVariantPrice?: number;
 }
 
 // ProductCard Component
 const ProductCard = ({ product }: { product: Product }) => {
   return (
     <div className="group cursor-pointer">
-      <div className="bg-gray-100 aspect-square mb-4 overflow-hidden rounded">
+      <div className="bg-gray-100 aspect-square mb-4 overflow-hidden rounded relative">
+        <div className="absolute right-3 top-3 z-10">
+          <WishlistButton productId={product._id} />
+        </div>
         <img
           src={product.images[0]?.url || '/placeholder.jpg'}
           alt={product.name}
@@ -53,7 +59,7 @@ const ProductCard = ({ product }: { product: Product }) => {
         />
       </div>
       <h3 className="font-medium text-sm mb-1 uppercase">{product.name}</h3>
-      <p className="text-sm text-gray-600">{product.materialVariants[0]?.price} LE</p>
+      <p className="text-sm text-gray-600">{formatProductPriceRange(product)}</p>
     </div>
   );
 };

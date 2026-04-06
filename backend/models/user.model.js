@@ -37,6 +37,23 @@ const loyaltyRewardRedemptionSchema = new mongoose.Schema({
   },
 }, { _id: false });
 
+const wishlistSnapshotSchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true,
+  },
+  savedPrice: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  addedAt: {
+    type: Date,
+    default: Date.now,
+  },
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -73,6 +90,10 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product'
   }],
+  wishlistSnapshots: {
+    type: [wishlistSnapshotSchema],
+    default: [],
+  },
   loyalty: {
     pointsBalance: {
       type: Number,

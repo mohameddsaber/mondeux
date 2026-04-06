@@ -1,4 +1,5 @@
 import User from '../models/user.model.js';
+import Product from '../models/product.model.js';
 import bcrypt from 'bcryptjs';
 import { generateTokenAndSetCookie } from '../utils/generateToken.js';
 import { protect, admin } from '../middleware/auth.js';
@@ -9,6 +10,69 @@ import {
   serializeSessionUser,
 } from '../utils/loyaltyHelpers.js';
 import { LOYALTY_SIGNUP_BONUS } from '../utils/loyaltyProgram.js';
+
+const getComparableProductPrice = (product) => {
+  const minVariantPrice = Number(product?.minVariantPrice || 0);
+
+  if (minVariantPrice > 0) {
+    return minVariantPrice;
+  }
+
+  const prices = (product?.materialVariants || [])
+    .map((variant) => Number(variant?.price || 0))
+    .filter((price) => price > 0);
+
+  return prices.length > 0 ? Math.min(...prices) : 0;
+};
+
+const serializeWishlistProducts = (products, snapshots = []) => {
+  const snapshotByProductId = new Map(
+    snapshots.map((snapshot) => [snapshot.product?.toString(), snapshot])
+  );
+
+  return products.map((product) => {
+    const productId = product._id.toString();
+    const currentPrice = getComparableProductPrice(product);
+    const snapshot = snapshotByProductId.get(productId);
+    const savedPrice = Number(snapshot?.savedPrice || currentPrice || 0);
+    const totalStock = Number(product.totalStock || 0);
+    const lowStockThreshold = Number(product.lowStockThreshold || 0);
+
+    return {
+      _id: product._id,
+      name: product.name,
+      slug: product.slug,
+      images: product.images || [],
+      rating: Number(product.rating || 0),
+      isActive: Boolean(product.isActive),
+      category: product.category || null,
+      subCategory: product.subCategory || null,
+      materialVariants: product.materialVariants || [],
+      minVariantPrice: currentPrice,
+      totalStock,
+      lowStockThreshold,
+      savedPrice,
+      addedAt: snapshot?.addedAt || null,
+      isLowStock: totalStock > 0 && totalStock <= lowStockThreshold,
+      isOutOfStock: totalStock <= 0,
+      priceDropped: currentPrice > 0 && savedPrice > currentPrice,
+      priceDropAmount: savedPrice > currentPrice ? savedPrice - currentPrice : 0,
+    };
+  });
+};
+
+const populateWishlistProducts = (userQuery) =>
+  userQuery.populate({
+    path: 'wishlist',
+    select: `
+      name slug images rating isActive category subCategory
+      materialVariants minVariantPrice totalStock lowStockThreshold
+    `,
+    populate: {
+      path: 'category subCategory',
+      select: 'name slug',
+    },
+  });
 
 
 export const isAuthenticated = [
@@ -222,15 +286,7 @@ export const logout = async (req, res) => {
 
 export const getWishlist = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-      .populate({
-        path: 'wishlist',
-        select: 'name slug price images rating stock isActive',
-        populate: {
-          path: 'category subCategory',
-          select: 'name slug'
-        }
-      });
+    const user = await populateWishlistProducts(User.findById(req.user._id));
 
     if (!user) {
       return res.status(404).json({
@@ -240,7 +296,10 @@ export const getWishlist = async (req, res) => {
     }
 
     // Filter out inactive products
-    const activeWishlist = user.wishlist.filter(item => item.isActive);
+    const activeWishlist = serializeWishlistProducts(
+      user.wishlist.filter((item) => item.isActive),
+      user.wishlistSnapshots || []
+    );
 
     res.json({
       success: true,
@@ -254,12 +313,27 @@ export const getWishlist = async (req, res) => {
 
 export const addToWishlist = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const [user, targetProduct] = await Promise.all([
+      User.findById(req.user._id),
+      Product.findById(req.params.productId)
+        .select(`
+          name slug images rating isActive category subCategory
+          materialVariants minVariantPrice totalStock lowStockThreshold
+        `)
+        .populate('category subCategory', 'name slug'),
+    ]);
 
     if (!user) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
+      });
+    }
+
+    if (!targetProduct || !targetProduct.isActive) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
       });
     }
 
@@ -276,16 +350,26 @@ export const addToWishlist = async (req, res) => {
     }
 
     user.wishlist.push(req.params.productId);
+    user.wishlistSnapshots = Array.isArray(user.wishlistSnapshots)
+      ? user.wishlistSnapshots.filter(
+        (snapshot) => snapshot.product?.toString() !== req.params.productId
+      )
+      : [];
+    user.wishlistSnapshots.push({
+      product: req.params.productId,
+      savedPrice: getComparableProductPrice(targetProduct),
+      addedAt: new Date(),
+    });
     await user.save();
 
-    await user.populate({
-      path: 'wishlist',
-      select: 'name slug price images rating'
-    });
+    await populateWishlistProducts(user);
 
     res.json({
       success: true,
-      data: user.wishlist
+      data: serializeWishlistProducts(
+        user.wishlist.filter((item) => item.isActive),
+        user.wishlistSnapshots || []
+      )
     });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -307,17 +391,20 @@ export const removeFromWishlist = async (req, res) => {
     user.wishlist = user.wishlist.filter(
       item => item.toString() !== req.params.productId
     );
+    user.wishlistSnapshots = (user.wishlistSnapshots || []).filter(
+      (snapshot) => snapshot.product?.toString() !== req.params.productId
+    );
 
     await user.save();
 
-    await user.populate({
-      path: 'wishlist',
-      select: 'name slug price images rating'
-    });
+    await populateWishlistProducts(user);
 
     res.json({
       success: true,
-      data: user.wishlist
+      data: serializeWishlistProducts(
+        user.wishlist.filter((item) => item.isActive),
+        user.wishlistSnapshots || []
+      )
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

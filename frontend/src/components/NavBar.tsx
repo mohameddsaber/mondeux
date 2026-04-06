@@ -1,16 +1,17 @@
 import { FaTimes } from "react-icons/fa";
-import { Menu, Search, ShoppingBag } from 'lucide-react';
+import { Heart, Menu, Search, ShoppingBag } from 'lucide-react';
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import ShoppingCartPanel from "./CartPanel";
-import { useCartSummary } from "../hooks/useStoreData";
+import { useCartSummary, useWishlistSummary } from "../hooks/useStoreData";
 
 function NavBar() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [searchValue, setSearchValue] = useState("");
   const { totalItems: cartItemCount } = useCartSummary();
+  const { totalItems: wishlistCount } = useWishlistSummary();
   const navigate = useNavigate();
 
   const submitSearch = () => {
@@ -71,6 +72,14 @@ function NavBar() {
               </div>
               <Search className="cursor-pointer" onClick={submitSearch} />
             </div>
+            <Link to="/wishlist" className="relative">
+              <Heart className="cursor-pointer" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-black text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-medium">
+                  {wishlistCount}
+                </span>
+              )}
+            </Link>
             <div className="relative">
               <button 
                 onClick={() => setIsCartOpen(true)}

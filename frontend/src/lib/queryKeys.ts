@@ -8,6 +8,9 @@ export const queryKeys = {
   loyalty: {
     detail: ["loyalty", "detail"] as const,
   },
+  wishlist: {
+    detail: ["wishlist", "detail"] as const,
+  },
   products: {
     list: (scope: string, params: Record<string, unknown>) =>
       ["products", "list", scope, params] as const,

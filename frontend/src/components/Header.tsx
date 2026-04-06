@@ -1,16 +1,17 @@
-import { Menu, Search, ShoppingBag } from 'lucide-react';
+import { Heart, Menu, Search, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import ShoppingCartPanel from './CartPanel';
 import { Link, useNavigate } from 'react-router-dom';
-import { useCartSummary } from '../hooks/useStoreData';
+import { useCartSummary, useWishlistSummary } from '../hooks/useStoreData';
 
 function Header() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [searchValue, setSearchValue] = useState("");
   const { totalItems: cartItemCount } = useCartSummary();
+  const { totalItems: wishlistCount } = useWishlistSummary();
   const navigate = useNavigate();
 
   const submitSearch = () => {
@@ -68,6 +69,14 @@ function Header() {
                 </div>
                 <Search className="cursor-pointer" onClick={submitSearch} />
               </div>
+              <Link to="/wishlist" className="p-2 hover:bg-gray-100 rounded relative">
+                <Heart className="w-6 h-6" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-black text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
               
               <button 
                 className="p-2 hover:bg-gray-100 rounded relative"
@@ -98,6 +107,7 @@ function Header() {
             <Link to="/subcategory/gold-rings" className="whitespace-nowrap hover:text-gray-600 transition">SHOP GOLD RINGS</Link>
             <Link to="/subcategory/silver-rings" className="whitespace-nowrap hover:text-gray-600 transition">SHOP SILVER RINGS</Link>
             <Link to="/my-orders" className="whitespace-nowrap hover:text-gray-600 transition">MY ORDERS</Link>
+            <Link to="/wishlist" className="whitespace-nowrap hover:text-gray-600 transition">WISHLIST</Link>
           </nav>
         </div>
         

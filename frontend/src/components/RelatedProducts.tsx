@@ -1,5 +1,6 @@
 import { Camera } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { formatProductPriceRange } from '@/lib/productPricing';
 
 interface MinimalProduct {
     _id: string;
@@ -7,7 +8,8 @@ interface MinimalProduct {
     slug: string;
     images: { url: string; alt: string; isPrimary: boolean }[];
     rating?: number;
-
+    minVariantPrice?: number;
+    materialVariants?: Array<{ price?: number }>;
 }
 
 interface RelatedProductsProps {
@@ -59,7 +61,7 @@ export default function RelatedProducts({ products }: RelatedProductsProps) {
                         {product.name}
                       </h3>
                       <p className="text-base font-semibold text-gray-700">
-                        View Price
+                        {formatProductPriceRange(product)}
                       </p>
                     </div>
                   </div>

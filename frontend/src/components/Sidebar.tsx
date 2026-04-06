@@ -252,6 +252,9 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
             <li className={sidebarItem}>
               <Link to="/my-orders" className="" onClick={onClose}>MY ORDERS</Link>
             </li>
+            <li className={sidebarItem}>
+              <Link to="/wishlist" className="" onClick={onClose}>WISHLIST</Link>
+            </li>
 
           </ul>
         </nav>

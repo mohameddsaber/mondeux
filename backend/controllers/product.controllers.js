@@ -634,7 +634,7 @@ export const getProductBySlug = async (req, res) => {
       isActive: true,
     })
       .limit(4)
-      .select('name slug price images rating');
+      .select('name slug images rating minVariantPrice materialVariants');
 
     res.json({
       success: true,
