@@ -7,6 +7,7 @@ import RelatedProducts from '../components/RelatedProducts.tsx';
 import TrustBadges from '../components/TrustBadges.tsx';
 import { type Product } from '../components/ProductCard.tsx'; 
 import { addToCart} from '../utils/cartManager.ts'; 
+import { apiFetch } from '../lib/api';
 
 
 export interface SizeVariant {
@@ -74,10 +75,9 @@ const ProductItemPage: React.FC = () => {
     const fetchProduct = async () => {
       setLoading(true);
       setError(null);
-      const endpoint = `http://localhost:4000/api/products/${slug}`;
 
       try {
-        const response = await fetch(endpoint);
+        const response = await apiFetch(`/products/${slug}`);
         
         if (!response.ok) {
            if (response.status === 404) {

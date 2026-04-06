@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api";
 
 interface Category {
   _id: string;
@@ -42,7 +43,7 @@ export default function CategoryPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/categories", { credentials: "include" });
+      const res = await apiFetch("/categories");
       const data = await res.json();
       if (data.success) setCategories(data.data);
     } catch {
@@ -52,7 +53,7 @@ export default function CategoryPage() {
 
   const fetchSubCategories = async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/subcategories", { credentials: "include" });
+      const res = await apiFetch("/subcategories");
       const data = await res.json();
       if (data.success) setSubCategories(data.data);
     } catch {
@@ -70,14 +71,12 @@ export default function CategoryPage() {
   const handleAddCategory = async () => {
     if (!newCategory.name.trim()) return toast.error("Category name required");
     try {
-      const res = await fetch("http://localhost:4000/api/categories", {
+      const res = await apiFetch("/categories", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
+        json: {
           ...newCategory,
           slug: newCategory.name.toLowerCase().replace(/\s+/g, "-"),
-        }),
+        },
       });
       const data = await res.json();
       if (data.success) {
@@ -95,14 +94,12 @@ export default function CategoryPage() {
       return toast.error("Name and category required");
 
     try {
-      const res = await fetch("http://localhost:4000/api/subcategories", {
+      const res = await apiFetch("/subcategories", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
+        json: {
           ...newSubCategory,
           slug: newSubCategory.name.toLowerCase().replace(/\s+/g, "-"),
-        }),
+        },
       });
       const data = await res.json();
       if (data.success) {
@@ -118,9 +115,8 @@ export default function CategoryPage() {
   const handleDeleteSub = async (id: string) => {
     if (!confirm("Delete this subcategory?")) return;
     try {
-      const res = await fetch(`http://localhost:4000/api/subcategories/${id}`, {
+      const res = await apiFetch(`/subcategories/${id}`, {
         method: "DELETE",
-        credentials: "include",
       });
       const data = await res.json();
       if (data.success) {
@@ -135,11 +131,9 @@ export default function CategoryPage() {
   const handleUpdateCategory = async () => {
     if (!editCategory) return;
     try {
-      const res = await fetch(`http://localhost:4000/api/categories/${editCategory._id}`, {
+      const res = await apiFetch(`/categories/${editCategory._id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(editCategory),
+        json: editCategory,
       });
       const data = await res.json();
       if (data.success) {
@@ -155,11 +149,9 @@ export default function CategoryPage() {
   const handleUpdateSub = async () => {
     if (!editSub) return;
     try {
-      const res = await fetch(`http://localhost:4000/api/subcategories/${editSub._id}`, {
+      const res = await apiFetch(`/subcategories/${editSub._id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(editSub),
+        json: editSub,
       });
       const data = await res.json();
       if (data.success) {

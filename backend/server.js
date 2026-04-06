@@ -1,9 +1,9 @@
 // server.js
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import connectDB from './db/db.js';
+import { appConfig, isAllowedOrigin } from './config/env.js';
 
 
 
@@ -16,18 +16,22 @@ import orderRoutes from './routes/order.routes.js';
 import userRoutes from './routes/user.routes.js';
 import salesRoutes from './routes/sales.routes.js';
 
-
-dotenv.config();
-
 const app = express();
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`Origin ${origin} is not allowed by CORS`));
+  },
   credentials: true, 
 }));
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser(appConfig.cookieSecret));
 app.use(express.urlencoded({ extended: true }));
 
 // Mount routes
@@ -57,10 +61,9 @@ app.use((req, res) => {
 });
 
 
-const PORT = process.env.PORT || 4000;
-
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+app.listen(appConfig.port, appConfig.host, () => {
+  const displayHost = appConfig.host === '0.0.0.0' ? 'localhost' : appConfig.host;
+  console.log(`Server is running on http://${displayHost}:${appConfig.port}`);
   connectDB();
 
 });
@@ -69,7 +72,6 @@ app.listen(PORT, () => {
 
 
 export default app;
-
 
 
 

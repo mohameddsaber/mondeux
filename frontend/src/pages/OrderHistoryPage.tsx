@@ -2,6 +2,7 @@ import  { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { Package, Truck, Calendar, DollarSign, X, CheckCircle, Clock } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
+import { apiFetch } from '../lib/api';
 
 type TableProps = { children: React.ReactNode };
 const Table: React.FC<TableProps> = ({ children }) => <table className="w-full caption-bottom text-sm">{children}</table>;
@@ -83,9 +84,6 @@ interface Pagination {
 
 const getErrorMessage = (error: unknown) =>
     error instanceof Error ? error.message : 'An unexpected error occurred';
-
-// --- API UTILITIES (MOCKED) ---
-const API_BASE_URL = 'http://localhost:4000/api/orders';
 
 const formatCurrency = (amount: number) => 
     `LE ${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -200,8 +198,7 @@ export default function OrderHistoryPage() {
         setLoading(true);
         setError(null);
         try {
-            const url = `${API_BASE_URL}?page=${page}&limit=${pagination.limit}`;
-            const response = await fetch(url, { credentials: 'include' }); 
+            const response = await apiFetch(`/orders?page=${page}&limit=${pagination.limit}`); 
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -228,8 +225,7 @@ export default function OrderHistoryPage() {
     const handleViewDetails = async (orderId: string) => {
 
         try {
-            const url = `${API_BASE_URL}/${orderId}`;
-            const response = await fetch(url, { credentials: 'include' });
+            const response = await apiFetch(`/orders/${orderId}`);
 
             if (!response.ok) {
                 const errorData = await response.json();

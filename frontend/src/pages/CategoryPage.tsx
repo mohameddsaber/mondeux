@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import FilterSidebar from "../components/FilterSidebar.tsx"
 import { Plus, Minus } from "lucide-react";
 import { Link } from "react-router-dom";
+import { apiFetch } from "../lib/api";
 
 interface CategoryPageProps {
   categorySlug: string; 
@@ -47,7 +48,7 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ categorySlug }) => {
       
       let sortQuery = '';
       
-      let endpoint = `http://localhost:4000/api/products/category/${categorySlug}?limit=20`; 
+      let endpoint = `/products/category/${categorySlug}?limit=20`; 
       
       if (sortBy === 'featured') {
 
@@ -65,7 +66,7 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ categorySlug }) => {
       }
       
       try {
-        const response = await fetch(endpoint);
+        const response = await apiFetch(endpoint);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

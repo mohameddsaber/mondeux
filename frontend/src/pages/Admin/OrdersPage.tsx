@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api";
 
 interface User {
   name: string;
@@ -43,9 +44,8 @@ export default function OrderPage() {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/orders/admin/all", {
+      const res = await apiFetch("/orders/admin/all", {
         method: "GET",
-        credentials: "include",
       });
       const data = await res.json();
       if (data.success) {
@@ -65,13 +65,9 @@ export default function OrderPage() {
   // ✅ Update delivery/status
 const handleStatusChange = async (orderId: string, newStatus: string) => {
   try {
-    const response = await fetch(`http://localhost:4000/api/orders/${orderId}/status`, {
+    const response = await apiFetch(`/orders/${orderId}/status`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include", // include cookies if using auth
-      body: JSON.stringify({ status: newStatus }), // body must contain 'status'
+      json: { status: newStatus },
     });
 
     const data = await response.json();
@@ -95,11 +91,9 @@ const handleStatusChange = async (orderId: string, newStatus: string) => {
   //  Update payment status
   const handlePaymentStatusChange = async (orderId: string, newPaymentStatus: string) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/orders/${orderId}/payment-status`, {
+      const res = await apiFetch(`/orders/${orderId}/payment-status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ paymentStatus: newPaymentStatus }),
+        json: { paymentStatus: newPaymentStatus },
       });
       const data = await res.json();
       if (data.success) {

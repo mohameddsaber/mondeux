@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, Package, Truck, CreditCard, Phone, Mail } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 interface OrderItem {
   product: {
@@ -49,9 +50,7 @@ export default function OrderConfirmationPage() {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const response = await fetch(`http://localhost:4000/api/orders/${orderId}`, {
-          credentials: 'include'
-        });
+        const response = await apiFetch(`/orders/${orderId}`);
 
         const data = await response.json();
 

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import FilterSidebar from "../components/FilterSidebar.tsx"
 import { Plus, Minus } from "lucide-react";
 import { Link,useLocation } from "react-router-dom";
+import { apiFetch } from "../lib/api";
 
 
 
@@ -59,19 +60,19 @@ const [sortBy, setSortBy] = useState<string>("best-selling");
       
       if (sortBy === 'featured') {
 
-        endpoint = `http://localhost:4000/api/products/featured?limit=20`; 
+        endpoint = `/products/featured?limit=20`; 
       } else if (sortBy === 'best-selling') {
 
         sortQuery = 'sort=popular'; 
-        endpoint = `http://localhost:4000/api/products?limit=20&${sortQuery}`;
+        endpoint = `/products?limit=20&${sortQuery}`;
       } else {
 
         sortQuery = `sort=${sortBy}`;
-        endpoint = `http://localhost:4000/api/products?limit=20&${sortQuery}`;
+        endpoint = `/products?limit=20&${sortQuery}`;
       }
 
       try {
-        const response = await fetch(endpoint);
+        const response = await apiFetch(endpoint);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

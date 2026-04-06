@@ -1,13 +1,12 @@
 import { Link } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 const HeaderAdmin = () => {
   const  handleLogout = async() => {
       try {
-    const res = await fetch(`http://localhost:4000/api/users/logout`, {
+    const res = await apiFetch('/users/logout', {
       method: "POST",
-      credentials: "include", 
-      headers: { "Content-Type": "application/json" },
     });
 
     const data = await res.json();

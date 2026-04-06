@@ -1,6 +1,7 @@
 // middleware/auth.js
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
+import { appConfig } from '../config/env.js';
 
 // Protect routes - verify JWT token
 export const protect = async (req, res, next) => {
@@ -16,7 +17,7 @@ export const protect = async (req, res, next) => {
     }
 
     // 2️⃣ Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, appConfig.jwtSecret);
 
     // 3️⃣ Get user and attach to request
     req.user = await User.findById(decoded.id).select("_id name email role");

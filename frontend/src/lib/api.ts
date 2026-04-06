@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = "http://localhost:4000/api";
+const DEFAULT_API_BASE_URL = "/api";
 
 export const API_BASE_URL = (
   import.meta.env.VITE_API_URL || DEFAULT_API_BASE_URL
@@ -26,4 +26,12 @@ export const apiFetch = async (path: string, options: ApiFetchOptions = {}) => {
     headers: requestHeaders,
     body: json !== undefined ? JSON.stringify(json) : body,
   });
+};
+
+export const apiFetchJson = async <T = unknown>(
+  path: string,
+  options: ApiFetchOptions = {}
+) => {
+  const response = await apiFetch(path, options);
+  return response.json() as Promise<T>;
 };

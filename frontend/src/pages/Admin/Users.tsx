@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api";
 
 interface User {
   _id: string;
@@ -23,9 +24,7 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:4000/api/users/admin/all`, {
-        credentials: "include",
-      });
+      const res = await apiFetch("/users/admin/all");
       const data = await res.json();
       setUsers(data.data || []);
     } catch (err) {
@@ -38,9 +37,8 @@ export default function UsersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
     try {
-      const res = await fetch(`http://localhost:4000/api/users/admin/${id}`, {
+      const res = await apiFetch(`/users/admin/${id}`, {
         method: "DELETE",
-        credentials: "include",
       });
       const data = await res.json();
 

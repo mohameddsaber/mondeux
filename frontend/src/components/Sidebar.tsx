@@ -1,6 +1,7 @@
 import {  Search, Plus } from 'lucide-react';
 import {  useState } from "react";
 import { Link } from 'react-router-dom';
+import { apiFetch } from '../lib/api';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -32,10 +33,8 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
   };
   const handleLogout = async () => {
   try {
-    const res = await fetch(`http://localhost:4000/api/users/logout`, {
+    const res = await apiFetch('/users/logout', {
       method: "POST",
-      credentials: "include", 
-      headers: { "Content-Type": "application/json" },
     });
 
     const data = await res.json();

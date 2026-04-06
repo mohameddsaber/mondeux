@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { apiFetch } from '../lib/api';
 
 // Product and variant interfaces
 interface SizeVariant {
@@ -81,8 +82,7 @@ const CategorySection = ({
     const fetchCategoryProducts = async () => {
       setLoading(true);
       try {
-        const endpoint = `http://localhost:4000/api/products/category/${categorySlug}?limit=4`;
-        const response = await fetch(endpoint);
+        const response = await apiFetch(`/products/category/${categorySlug}?limit=4`);
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

@@ -24,6 +24,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { DollarSign, Users, Package, Clock,FolderTree } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 interface SalesSummary {
   totalRevenue: number;
@@ -51,8 +52,6 @@ const useAdminData = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-
     const fetchAllData = async () => {
       try {
         const [
@@ -63,12 +62,12 @@ const useAdminData = () => {
           productsRes,
           categoriesRes,
         ] = await Promise.all([
-          fetch(`${BASE_URL}/sales/summary`, { credentials: 'include' }),
-          fetch(`${BASE_URL}/sales/by-date`, { credentials: 'include' }),
-          fetch(`${BASE_URL}/orders/admin/all?limit=5`, { credentials: 'include' }),
-          fetch(`${BASE_URL}/users/admin/all?limit=1`, { credentials: 'include' }),
-          fetch(`${BASE_URL}/products`, { credentials: 'include' }),
-          fetch(`${BASE_URL}/categories`, { credentials: 'include' }),
+          apiFetch('/sales/summary'),
+          apiFetch('/sales/by-date'),
+          apiFetch('/orders/admin/all?limit=5'),
+          apiFetch('/users/admin/all?limit=1'),
+          apiFetch('/products'),
+          apiFetch('/categories'),
         ]);
 
         const summaryData = await summaryRes.json();
@@ -445,7 +444,6 @@ console.log(salesData);
     </div>
   );
 }
-
 
 
 

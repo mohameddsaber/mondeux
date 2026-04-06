@@ -9,6 +9,7 @@ import {
   fetchCart,
   getCartSubtotal
 } from '../utils/cartManager';
+import { apiFetch } from '../lib/api';
 
 interface ShippingAddress {
   name: string;
@@ -114,19 +115,15 @@ export default function CheckoutPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch('http://localhost:4000/api/orders', {
+      const response = await apiFetch('/orders', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
+        json: {
           shippingAddress: formData.shippingAddress,
           paymentMethod: formData.paymentMethod,
           shippingCost: shippingCost,
           tax: tax,
           customerNotes: formData.customerNotes
-        })
+        }
       });
 
       const data = await response.json();

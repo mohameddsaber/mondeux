@@ -2,6 +2,7 @@ import User from '../models/user.model.js';
 import bcrypt from 'bcryptjs';
 import { generateTokenAndSetCookie } from '../utils/generateToken.js';
 import { protect, admin } from '../middleware/auth.js';
+import { appConfig } from '../config/env.js';
 
 
 export const isAuthenticated = [
@@ -157,8 +158,8 @@ export const logout = async (req, res) => {
   try {
     res.cookie("jwt", "", {
       httpOnly: true,
-      sameSite: "Strict",
-      secure: process.env.NODE_ENV === "production",
+      sameSite: appConfig.authCookieSameSite,
+      secure: appConfig.authCookieSecure,
       expires: new Date(0) // Expire the cookie immediately
     });
 
