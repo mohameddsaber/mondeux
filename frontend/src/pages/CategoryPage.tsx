@@ -1,21 +1,16 @@
 import ProductCard, { type Product } from "../components/ProductCard.tsx";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import FilterSidebar from "../components/FilterSidebar.tsx"
 import { Plus, Minus } from "lucide-react";
 import { Link } from "react-router-dom";
-import { apiFetch } from "../lib/api";
+import { getApiErrorMessage } from "../lib/api";
+import { useCategoryProductsQuery } from "../hooks/useStoreData";
 
 interface CategoryPageProps {
   categorySlug: string; 
 }
 
 const CategoryPage: React.FC<CategoryPageProps> = ({ categorySlug }) => {
-
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
   const availabilityOptions = ["In Stock", "Out of Stock", "Pre-Order"];
@@ -41,52 +36,12 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ categorySlug }) => {
   };
 
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      setError(null);
-      
-      let sortQuery = '';
-      
-      let endpoint = `/products/category/${categorySlug}?limit=20`; 
-      
-      if (sortBy === 'featured') {
-
-         sortQuery = 'sort=featured'; 
-      } else if (sortBy === 'best-selling') {
-
-        sortQuery = 'sort=popular'; 
-      } else {
-
-        sortQuery = `sort=${sortBy}`;
-      }
-
-      if (sortQuery) {
-          endpoint += `&${sortQuery}`;
-      }
-      
-      try {
-        const response = await apiFetch(endpoint);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const result = await response.json();
-        
-        setProducts(result.data || []); 
-      } catch (e) {
-        if (e instanceof Error) {
-            setError(e.message);
-        } else {
-            setError('An unknown error occurred.');
-        }
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [sortBy, categorySlug]);
+  const productsQuery = useCategoryProductsQuery(categorySlug, sortBy);
+  const products: Product[] = productsQuery.data?.data || [];
+  const loading = productsQuery.isPending;
+  const error = productsQuery.error
+    ? getApiErrorMessage(productsQuery.error, "Failed to fetch products")
+    : null;
 
 
   const pageTitle = categorySlug 

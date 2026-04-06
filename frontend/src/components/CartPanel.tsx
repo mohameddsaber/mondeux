@@ -1,14 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Minus, Plus, Lock, Leaf, X } from 'lucide-react'; // Added X for remove
-import { 
+import {
   type CartItem,
-  getCartItems,
-  updateCartItemQuantity,
-  removeFromCart,
-  subscribeToCart,
-  fetchCart,
-  getCartSubtotal
-} from '../utils/cartManager';
+  useCartSummary,
+  useRemoveFromCartMutation,
+  useUpdateCartItemQuantityMutation,
+} from '../hooks/useStoreData';
 import { Link } from 'react-router-dom';
 
 interface ShoppingCartPanelProps {
@@ -22,51 +19,32 @@ export default function ShoppingCartPanel({
   onClose, 
   onCartUpdate
 }: ShoppingCartPanelProps) {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(false); 
   const [packageProtection, setPackageProtection] = useState(true);
   const protectionPrice = 493.76;
-
-  useEffect(() => {
-    const loadCart = async () => {
-        setLoading(true);
-        await fetchCart();
-        setItems(getCartItems());
-        setLoading(false);
-    };
-
-    if (isOpen) {
-        loadCart();
-    } else {
-        setItems(getCartItems());
-    }
-
-    const unsubscribe = subscribeToCart((updatedItems) => {
-      setItems(updatedItems);
-    });
-
-    return unsubscribe;
-  }, [isOpen]); 
+  const { items, subtotal, totalItems, isPending: loading } = useCartSummary();
+  const updateQuantityMutation = useUpdateCartItemQuantityMutation();
+  const removeFromCartMutation = useRemoveFromCartMutation();
 
   useEffect(() => {
     if (onCartUpdate) {
-      const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
       onCartUpdate(totalItems);
     }
-  }, [items, onCartUpdate]);
+  }, [onCartUpdate, totalItems]);
 
   const handleUpdateQuantity = (item: CartItem, delta: number) => {
-
-    updateCartItemQuantity(item.productId, item.size, item.material, delta);
+    updateQuantityMutation.mutate({
+      productId: item.productId,
+      size: item.size,
+      material: item.material,
+      delta,
+    });
   };
 
   const handleRemoveItem = (productId: string, size: string, material: string) => {
-    removeFromCart(productId, size, material);
+    removeFromCartMutation.mutate({ productId, size, material });
   };
 
-  const subtotal = getCartSubtotal();
   const total = subtotal + (packageProtection ? protectionPrice : 0);
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div

@@ -35,3 +35,67 @@ export const apiFetchJson = async <T = unknown>(
   const response = await apiFetch(path, options);
   return response.json() as Promise<T>;
 };
+
+export class ApiError extends Error {
+  status: number;
+  data: unknown;
+
+  constructor(message: string, status: number, data: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.data = data;
+  }
+}
+
+const parseApiResponse = async (response: Response) => {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+};
+
+export const getApiErrorMessage = (
+  error: unknown,
+  fallback = "Something went wrong"
+) => {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+export const apiRequest = async <T = unknown>(
+  path: string,
+  options: ApiFetchOptions = {}
+) => {
+  const response = await apiFetch(path, options);
+  const data = await parseApiResponse(response);
+
+  if (!response.ok) {
+    const message =
+      (typeof data === "object" &&
+      data !== null &&
+      "message" in data &&
+      typeof data.message === "string"
+        ? data.message
+        : null) ||
+      `Request failed with status ${response.status}`;
+
+    throw new ApiError(message, response.status, data);
+  }
+
+  return data as T;
+};

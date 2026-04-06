@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, useParams, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, useParams, Navigate, useNavigate, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import NavBar from "./components/NavBar";
 import ProductsPage from "./pages/ProductsPage";
@@ -24,7 +24,7 @@ import CategoriesPageAdmin from "./pages/Admin/CategoriesPage";
 import Footer from './components/Footer';
 import TestimonialsSection from "./components/TestimonialsSection";
 import HeaderAdmin from "./components/HeaderAdmin";
-import { apiFetch } from "./lib/api";
+import { useCurrentUserQuery } from "./hooks/useStoreData";
 
 const CategoryPageWrapper = () => {
     const { categorySlug } = useParams<{ categorySlug: string }>();
@@ -38,63 +38,20 @@ const SubCategoryPageWrapper = () => {
 }
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoyaltyOpen, setIsLoyaltyOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { data: currentUser, isPending: isCheckingAdmin } = useCurrentUserQuery();
+  const isAuthenticated = Boolean(currentUser);
+  const isAdmin = currentUser?.role === "admin";
 
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
-  
   useEffect(() => {
-    let isMounted = true;
-
-    const checkSession = async () => {
-      try {
-        const res = await apiFetch("/users/me", {
-          method: "GET",
-        });
-
-        const data = await res.json();
-
-        if (!isMounted) {
-          return;
-        }
-
-        if (res.ok && data.success && data.user) {
-          const userIsAdmin = data.user.role === "admin";
-
-          setIsAuthenticated(true);
-          setIsAdmin(userIsAdmin);
-
-          if (userIsAdmin && (window.location.pathname === "/" || window.location.pathname === "/auth")) {
-            navigate("/admin/dashboard", { replace: true });
-          }
-        } else {
-          setIsAuthenticated(false);
-          setIsAdmin(false);
-        }
-      } catch (err) {
-        if (!isMounted) {
-          return;
-        }
-
-        setIsAuthenticated(false);
-        setIsAdmin(false);
-        console.log(err);
-      } finally {
-        if (isMounted) {
-          setIsCheckingAdmin(false);
-        }
-      }
-    };
-
-    setIsCheckingAdmin(true);
-    checkSession();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [navigate]);
-      
+    if (
+      isAdmin &&
+      (location.pathname === "/" || location.pathname === "/auth")
+    ) {
+      navigate("/admin/dashboard", { replace: true });
+    }
+  }, [isAdmin, location.pathname, navigate]);
 
   return (
     <>

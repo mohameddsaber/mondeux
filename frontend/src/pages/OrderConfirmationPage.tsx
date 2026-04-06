@@ -1,8 +1,8 @@
 // OrderConfirmationPage.tsx
-import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, Package, Truck, CreditCard, Phone, Mail } from 'lucide-react';
-import { apiFetch } from '../lib/api';
+import { getApiErrorMessage } from '../lib/api';
+import { useOrderDetailQuery } from '../hooks/useStoreData';
 
 interface OrderItem {
   product: {
@@ -43,36 +43,12 @@ interface Order {
 export default function OrderConfirmationPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        const response = await apiFetch(`/orders/${orderId}`);
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to fetch order');
-        }
-
-        if (data.success) {
-          setOrder(data.data);
-        }
-      } catch (err: any) {
-        setError(err.message);
-        console.error('Error fetching order:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (orderId) {
-      fetchOrder();
-    }
-  }, [orderId]);
+  const orderQuery = useOrderDetailQuery(orderId || null);
+  const order = (orderQuery.data?.data as Order | undefined) ?? null;
+  const loading = orderQuery.isPending;
+  const error = orderQuery.error
+    ? getApiErrorMessage(orderQuery.error, 'Failed to fetch order')
+    : '';
 
   if (loading) {
     return (

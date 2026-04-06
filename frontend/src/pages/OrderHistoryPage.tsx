@@ -1,8 +1,9 @@
-import  { useState, useEffect, useCallback, type ReactNode } from 'react';
+import  { useState, type ReactNode } from 'react';
 import { Package, Truck, Calendar, DollarSign, X, CheckCircle, Clock } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { apiFetch } from '../lib/api';
+import { getApiErrorMessage } from '../lib/api';
+import { useMyOrdersQuery, useOrderDetailQuery } from '../hooks/useStoreData';
 
 type TableProps = { children: React.ReactNode };
 const Table: React.FC<TableProps> = ({ children }) => <table className="w-full caption-bottom text-sm">{children}</table>;
@@ -81,9 +82,6 @@ interface Pagination {
     total: number;
     pages: number;
 }
-
-const getErrorMessage = (error: unknown) =>
-    error instanceof Error ? error.message : 'An unexpected error occurred';
 
 const formatCurrency = (amount: number) => 
     `LE ${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -188,61 +186,25 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose })
 };
 
 export default function OrderHistoryPage() {
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, pages: 1 });
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-
-    const fetchOrders = useCallback(async (page: number) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await apiFetch(`/orders?page=${page}&limit=${pagination.limit}`); 
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `Failed to fetch orders (Status: ${response.status})`);
-            }
-
-            const result = await response.json();
-            setOrders(result.data || []);
-            setPagination(result.pagination || { page: 1, limit: 10, total: 0, pages: 1 });
-
-        } catch (err) {
-            setError(getErrorMessage(err));
-            setOrders([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [pagination.limit]);
-
-
-    useEffect(() => {
-        fetchOrders(pagination.page);
-    }, [fetchOrders, pagination.page]);
-
-    const handleViewDetails = async (orderId: string) => {
-
-        try {
-            const response = await apiFetch(`/orders/${orderId}`);
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `Failed to fetch order details (Status: ${response.status})`);
-            }
-
-            const result = await response.json();
-            setSelectedOrder(result.data);
-
-        } catch (err) {
-            setError(getErrorMessage(err));
-        }
-    };
+    const [page, setPage] = useState(1);
+    const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+    const limit = 10;
+    const ordersQuery = useMyOrdersQuery(page, limit);
+    const orderDetailQuery = useOrderDetailQuery(selectedOrderId);
+    const orders = (ordersQuery.data?.data as Order[]) || [];
+    const pagination =
+      (ordersQuery.data?.pagination as Pagination | undefined) ||
+      { page, limit, total: 0, pages: 1 };
+    const loading = ordersQuery.isPending;
+    const error = ordersQuery.error
+      ? getApiErrorMessage(ordersQuery.error, "Failed to fetch orders")
+      : orderDetailQuery.error
+      ? getApiErrorMessage(orderDetailQuery.error, "Failed to fetch order details")
+      : null;
 
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= pagination.pages) {
-            setPagination(prev => ({ ...prev, page: newPage }));
+            setPage(newPage);
         }
     };
 
@@ -324,7 +286,7 @@ export default function OrderHistoryPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                     <Button
-                                        onClick={() => handleViewDetails(order._id)}
+                                        onClick={() => setSelectedOrderId(order._id)}
                                         className="bg-transparent text-gray-900 border border-gray-300 hover:bg-gray-100 h-8 px-3"
                                     >
                                         View Details
@@ -366,7 +328,7 @@ export default function OrderHistoryPage() {
                                 {formatCurrency(order.totalAmount)}
                                 </span>
                                 <Button
-                                onClick={() => handleViewDetails(order._id)}
+                                onClick={() => setSelectedOrderId(order._id)}
                                 className="bg-transparent text-gray-900 border border-gray-300 hover:bg-gray-100 h-8 px-3 text-xs sm:text-sm whitespace-nowrap"
                                 >
                                 View Details
@@ -407,10 +369,16 @@ export default function OrderHistoryPage() {
             </div>
 
             {/* Order Details Modal */}
-            {selectedOrder && (
+            {selectedOrderId && orderDetailQuery.isPending && (
+                <div className="fixed inset-0 z-50 bg-gray-900/50 flex items-center justify-center">
+                    <div className="bg-white px-6 py-4 rounded-lg shadow-xl">Loading order details...</div>
+                </div>
+            )}
+
+            {orderDetailQuery.data?.data && (
                 <OrderDetailsModal 
-                    order={selectedOrder} 
-                    onClose={() => setSelectedOrder(null)} 
+                    order={orderDetailQuery.data.data as Order} 
+                    onClose={() => setSelectedOrderId(null)} 
                 />
             )}
         </div>

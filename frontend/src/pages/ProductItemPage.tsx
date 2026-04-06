@@ -5,9 +5,8 @@ import ProductImageSlider from '../components/ProductImageSlider.tsx';
 import ProductAccordian from '../components/ProductAccordian.tsx';
 import RelatedProducts from '../components/RelatedProducts.tsx';
 import TrustBadges from '../components/TrustBadges.tsx';
-import { type Product } from '../components/ProductCard.tsx'; 
-import { addToCart} from '../utils/cartManager.ts'; 
-import { apiFetch } from '../lib/api';
+import { getApiErrorMessage } from '../lib/api';
+import { useAddToCartMutation, useProductDetailQuery } from '../hooks/useStoreData';
 
 
 export interface SizeVariant {
@@ -52,9 +51,6 @@ const ProductItemPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>(); 
   const navigate = useNavigate(); 
 
-  const [product, setProduct] = useState<ProductDetails | null>(null);
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // 🎯 FIX: Changed to store the material name string
@@ -64,63 +60,37 @@ const ProductItemPage: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const quantity = 1;
+  const addToCartMutation = useAddToCartMutation();
   
+  const productQuery = useProductDetailQuery(slug || "");
+  const product = (productQuery.data?.data as ProductDetails | undefined) ?? null;
+  const relatedProducts = productQuery.data?.relatedProducts || [];
+  const loading = productQuery.isPending;
+  const queryError = productQuery.error
+    ? getApiErrorMessage(productQuery.error, "Failed to load product")
+    : null;
+
   useEffect(() => {
-    if (!slug) {
-      setError("Product slug is missing.");
-      setLoading(false);
+    if (!product) {
+      setSelectedMaterialName(null);
+      setSelectedSize(null);
       return;
     }
 
-    const fetchProduct = async () => {
-      setLoading(true);
-      setError(null);
+    if (product.materialVariants.length === 0) {
+      return;
+    }
 
-      try {
-        const response = await apiFetch(`/products/${slug}`);
-        
-        if (!response.ok) {
-           if (response.status === 404) {
-             throw new Error("Product not found.");
-          }
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        const fetchedProduct: ProductDetails = result.data;
-        const fetchedRelatedProducts: Product[] = result.relatedProducts || []; 
+    const initialMaterial = product.materialVariants[0];
+    setSelectedMaterialName(initialMaterial.material);
 
-        setProduct(fetchedProduct);
-        setRelatedProducts(fetchedRelatedProducts);
-        
-
-        if (fetchedProduct.materialVariants.length > 0) {
-            const initialMaterial = fetchedProduct.materialVariants[0];
-
-            setSelectedMaterialName(initialMaterial.material); 
-
-            if (initialMaterial.sizeVariants.length > 0) {
-
-              const initialSize = initialMaterial.sizeVariants.find(s => s.isAvailable && s.stock > 0) || initialMaterial.sizeVariants[0];
-                setSelectedSize(initialSize);
-            }
-        }
-        
-      } catch (e) {
-        if (e instanceof Error) {
-            setError(e.message);
-        } else {
-            setError('An unknown error occurred.');
-        }
-        setProduct(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProduct();
-  }, [slug]);
+    if (initialMaterial.sizeVariants.length > 0) {
+      const initialSize =
+        initialMaterial.sizeVariants.find((s) => s.isAvailable && s.stock > 0) ||
+        initialMaterial.sizeVariants[0];
+      setSelectedSize(initialSize);
+    }
+  }, [product]);
 
 
   const selectedMaterial = product?.materialVariants.find(
@@ -183,7 +153,7 @@ const ProductItemPage: React.FC = () => {
         quantity: quantity, 
       };
 
-      await addToCart(payload); 
+      await addToCartMutation.mutateAsync(payload); 
 
 
       setTimeout(() => {
@@ -243,7 +213,23 @@ const ProductItemPage: React.FC = () => {
     return detailsArray;
   };
 
-  const details = getProductDetails(product!, selectedMaterial);
+  const details = product ? getProductDetails(product, selectedMaterial) : [];
+
+  if (!slug) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">Product slug is missing.</p>
+          <button
+            onClick={() => navigate('/products')}
+            className="px-6 py-3 bg-black text-white rounded hover:bg-gray-800 transition-colors"
+          >
+            Back to Products
+          </button>
+        </div>
+      </div>
+    );
+  }
 
 
 
@@ -258,12 +244,12 @@ const ProductItemPage: React.FC = () => {
     );
   }
 
-  if (error && !addedToCart) { 
+  if ((queryError || error || !product) && !addedToCart) { 
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center ">
         <div className="text-center">
           <h1 className="text-6xl font-bold mb-4">Error</h1>
-          <p className="text-xl mb-8 text-red-600">{error}</p>
+          <p className="text-xl mb-8 text-red-600">{queryError || error || 'Product not found.'}</p>
           <button
             onClick={() => {
               setError(null);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,16 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { apiFetch } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/api";
+import {
+  useCategoriesQuery,
+  useSubCategoriesQuery,
+  useCreateCategoryMutation,
+  useCreateSubCategoryMutation,
+  useDeleteSubCategoryMutation,
+  useUpdateCategoryMutation,
+  useUpdateSubCategoryMutation,
+} from "@/hooks/useStoreData";
 
 interface Category {
   _id: string;
@@ -33,59 +42,32 @@ interface SubCategory {
 }
 
 export default function CategoryPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-  const [loading, setLoading] = useState(true);
   const [newCategory, setNewCategory] = useState({ name: "", description: "", image: "" });
   const [newSubCategory, setNewSubCategory] = useState({ name: "", category: "", description: "", image: "" });
   const [editCategory, setEditCategory] = useState<Category | null>(null);
   const [editSub, setEditSub] = useState<SubCategory | null>(null);
-
-  const fetchCategories = async () => {
-    try {
-      const res = await apiFetch("/categories");
-      const data = await res.json();
-      if (data.success) setCategories(data.data);
-    } catch {
-      toast.error("Failed to fetch categories");
-    }
-  };
-
-  const fetchSubCategories = async () => {
-    try {
-      const res = await apiFetch("/subcategories");
-      const data = await res.json();
-      if (data.success) setSubCategories(data.data);
-    } catch {
-      toast.error("Failed to fetch subcategories");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-    fetchSubCategories();
-  }, []);
+  const categoriesQuery = useCategoriesQuery();
+  const subCategoriesQuery = useSubCategoriesQuery();
+  const createCategoryMutation = useCreateCategoryMutation();
+  const createSubCategoryMutation = useCreateSubCategoryMutation();
+  const deleteSubCategoryMutation = useDeleteSubCategoryMutation();
+  const updateCategoryMutation = useUpdateCategoryMutation();
+  const updateSubCategoryMutation = useUpdateSubCategoryMutation();
+  const categories = (categoriesQuery.data?.data as Category[]) || [];
+  const subCategories = (subCategoriesQuery.data?.data as SubCategory[]) || [];
+  const loading = categoriesQuery.isPending || subCategoriesQuery.isPending;
 
   const handleAddCategory = async () => {
     if (!newCategory.name.trim()) return toast.error("Category name required");
     try {
-      const res = await apiFetch("/categories", {
-        method: "POST",
-        json: {
-          ...newCategory,
-          slug: newCategory.name.toLowerCase().replace(/\s+/g, "-"),
-        },
+      await createCategoryMutation.mutateAsync({
+        ...newCategory,
+        slug: newCategory.name.toLowerCase().replace(/\s+/g, "-"),
       });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Category added");
-        setNewCategory({ name: "", description: "", image: "" });
-        fetchCategories();
-      }
-    } catch {
-      toast.error("Error adding category");
+      toast.success("Category added");
+      setNewCategory({ name: "", description: "", image: "" });
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Error adding category"));
     }
   };
 
@@ -94,73 +76,52 @@ export default function CategoryPage() {
       return toast.error("Name and category required");
 
     try {
-      const res = await apiFetch("/subcategories", {
-        method: "POST",
-        json: {
-          ...newSubCategory,
-          slug: newSubCategory.name.toLowerCase().replace(/\s+/g, "-"),
-        },
+      await createSubCategoryMutation.mutateAsync({
+        ...newSubCategory,
+        slug: newSubCategory.name.toLowerCase().replace(/\s+/g, "-"),
       });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Subcategory added");
-        setNewSubCategory({ name: "", category: "", description: "", image: "" });
-        fetchSubCategories();
-      } else toast.error(data.message);
-    } catch {
-      toast.error("Error adding subcategory");
+      toast.success("Subcategory added");
+      setNewSubCategory({ name: "", category: "", description: "", image: "" });
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Error adding subcategory"));
     }
   };
 
   const handleDeleteSub = async (id: string) => {
     if (!confirm("Delete this subcategory?")) return;
     try {
-      const res = await apiFetch(`/subcategories/${id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Subcategory deleted");
-        fetchSubCategories();
-      } else toast.error(data.message);
-    } catch {
-      toast.error("Error deleting subcategory");
+      await deleteSubCategoryMutation.mutateAsync(id);
+      toast.success("Subcategory deleted");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Error deleting subcategory"));
     }
   };
 
   const handleUpdateCategory = async () => {
     if (!editCategory) return;
     try {
-      const res = await apiFetch(`/categories/${editCategory._id}`, {
-        method: "PUT",
-        json: editCategory,
+      await updateCategoryMutation.mutateAsync({
+        categoryId: editCategory._id,
+        payload: editCategory,
       });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Category updated");
-        setEditCategory(null);
-        fetchCategories();
-      } else toast.error(data.message);
-    } catch {
-      toast.error("Error updating category");
+      toast.success("Category updated");
+      setEditCategory(null);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Error updating category"));
     }
   };
 
   const handleUpdateSub = async () => {
     if (!editSub) return;
     try {
-      const res = await apiFetch(`/subcategories/${editSub._id}`, {
-        method: "PUT",
-        json: editSub,
+      await updateSubCategoryMutation.mutateAsync({
+        subCategoryId: editSub._id,
+        payload: editSub,
       });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Subcategory updated");
-        setEditSub(null);
-        fetchSubCategories();
-      } else toast.error(data.message);
-    } catch {
-      toast.error("Error updating subcategory");
+      toast.success("Subcategory updated");
+      setEditSub(null);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Error updating subcategory"));
     }
   };
 

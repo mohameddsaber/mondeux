@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { apiFetch } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/api";
+import { useAdminUsersQuery, useDeleteUserMutation } from "@/hooks/useStoreData";
 
 interface User {
   _id: string;
@@ -17,45 +18,21 @@ interface User {
 
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const res = await apiFetch("/users/admin/all");
-      const data = await res.json();
-      setUsers(data.data || []);
-    } catch (err) {
-      toast.error("Failed to fetch users");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const usersQuery = useAdminUsersQuery();
+  const deleteUserMutation = useDeleteUserMutation();
+  const users = (usersQuery.data?.data as User[]) || [];
+  const loading = usersQuery.isPending;
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
     try {
-      const res = await apiFetch(`/users/admin/${id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        toast.success("User deleted successfully");
-        setUsers(users.filter((u) => u._id !== id));
-      } else {
-        toast.error(data.message);
-      }
+      await deleteUserMutation.mutateAsync(id);
+      toast.success("User deleted successfully");
     } catch (err) {
-      toast.error("Failed to delete user");
+      toast.error(getApiErrorMessage(err, "Failed to delete user"));
     }
   };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   const filtered = users.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||

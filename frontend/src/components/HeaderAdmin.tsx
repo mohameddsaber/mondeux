@@ -1,25 +1,16 @@
 import { Link } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
-import { apiFetch } from '../lib/api';
+import { getApiErrorMessage } from '../lib/api';
+import { useLogoutMutation } from '../hooks/useStoreData';
 
 const HeaderAdmin = () => {
+  const logoutMutation = useLogoutMutation();
   const  handleLogout = async() => {
       try {
-    const res = await apiFetch('/users/logout', {
-      method: "POST",
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      console.log("Logged out successfully");
-      window.location.reload();
-
-    } else {
-      console.error(data.message || "Logout failed");
-    }
+    await logoutMutation.mutateAsync();
+    window.location.assign("/");
   } catch (error) {
-    console.error("Error logging out:", error);
+    console.error("Error logging out:", getApiErrorMessage(error, "Logout failed"));
   }
 
   };

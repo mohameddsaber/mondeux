@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getProducts,
   createProduct,
   updateProduct,
   deleteProduct,
-  getCategories,
-  getSubCategories,
 } from "@/utils/products";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +23,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  useCategoriesQuery,
+  useSubCategoriesQuery,
+} from "@/hooks/useStoreData";
 
 type SizeVariant = {
   _id?: string;
@@ -72,12 +75,8 @@ type Category = { _id: string; name: string };
 type SubCategory = { _id: string; name: string; category: string };
 
 export default function ProductsPage() {
-  // data
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-
+  const queryClient = useQueryClient();
+  const adminProductsQueryKey = ["products", "list", "admin-products"] as const;
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
 
@@ -122,45 +121,42 @@ export default function ProductsPage() {
   const getRefValue = (value?: CategoryRef) =>
     typeof value === "string" ? value : value?._id || "";
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [prodRes, catRes] = await Promise.all([getProducts(), getCategories()]);
-        const prods = unwrap(prodRes);
-        const cats = unwrap(catRes);
-        setProducts(Array.isArray(prods) ? (prods as Product[]) : []);
-        setCategories(Array.isArray(cats) ? (cats as Category[]) : []);
-      } catch (err) {
-        console.error("Failed to load products/categories", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+  const productsQuery = useQuery({
+    queryKey: adminProductsQueryKey,
+    queryFn: getProducts,
+  });
+  const categoriesQuery = useCategoriesQuery();
+  const subCategoriesQuery = useSubCategoriesQuery();
+  const createProductMutation = useMutation({
+    mutationFn: createProduct,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: adminProductsQueryKey });
+    },
+  });
+  const updateProductMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Product }) =>
+      updateProduct(id, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: adminProductsQueryKey });
+    },
+  });
+  const deleteProductMutation = useMutation({
+    mutationFn: deleteProduct,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: adminProductsQueryKey });
+    },
+  });
 
-  // whenever category select changes, fetch subcategories dynamically
-  useEffect(() => {
-    const loadSub = async () => {
-      if (!form.category) {
-        setSubCategories([]);
-        return;
-      }
-      try {
-        const res = await getSubCategories(); // your util returns whole list
-        const allSubs = unwrap(res) as SubCategory[];
-        const selectedCategoryId = getRefValue(form.category);
-        // filter client-side by category id (server-side filter endpoint optional)
-        const filtered = allSubs.filter((s) => s.category === selectedCategoryId);
-        setSubCategories(filtered);
-      } catch (err) {
-        console.error("Failed to load subcategories", err);
-        setSubCategories([]);
-      }
-    };
-    loadSub();
-  }, [form.category]);
+  const products = Array.isArray(unwrap(productsQuery.data))
+    ? (unwrap(productsQuery.data) as Product[])
+    : [];
+  const categories = (categoriesQuery.data?.data as Category[]) || [];
+  const allSubCategories = (subCategoriesQuery.data?.data as SubCategory[]) || [];
+  const subCategories = form.category
+    ? allSubCategories.filter((s) => s.category === getRefValue(form.category))
+    : [];
+  const loading =
+    productsQuery.isPending || categoriesQuery.isPending || subCategoriesQuery.isPending;
 
   const openCreate = () => {
     setEditing(null);
@@ -184,8 +180,7 @@ export default function ProductsPage() {
     if (!id) return;
     if (!confirm("Are you sure you want to permanently delete this product?")) return;
     try {
-      await deleteProduct(id);
-      setProducts((prev) => prev.filter((x) => x._id !== id));
+      await deleteProductMutation.mutateAsync(id);
     } catch (err) {
       console.error("Delete failed", err);
       alert("Delete failed");
@@ -327,13 +322,12 @@ export default function ProductsPage() {
       payload.numReviews = payload.numReviews ? Number(payload.numReviews) : 0;
 
       if (!editing) {
-        const res = await createProduct(payload);
-        const created = unwrap(res) as Product;
-        setProducts((prev) => [created, ...prev]);
+        await createProductMutation.mutateAsync(payload);
       } else {
-        const res = await updateProduct(editing._id!, payload);
-        const updated = unwrap(res) as Product;
-        setProducts((prev) => prev.map((p) => (p._id === editing._id ? updated : p)));
+        await updateProductMutation.mutateAsync({
+          id: editing._id!,
+          payload,
+        });
       }
 
       setOpen(false);

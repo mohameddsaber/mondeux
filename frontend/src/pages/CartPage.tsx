@@ -1,42 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Lock, Leaf, Minus, Plus, X } from 'lucide-react'; 
 import { Link } from 'react-router-dom';
-import { 
-  type CartItem,
-  getCartItems,
-  updateCartItemQuantity,
-  removeFromCart,
-  subscribeToCart,
-  fetchCart,
-  //getCartCount
-} from '../utils/cartManager';
+import {
+  useCartSummary,
+  useRemoveFromCartMutation,
+  useUpdateCartItemQuantityMutation,
+} from '../hooks/useStoreData';
 
 export default function CartPage() {
-  const [items, setItems] = useState<CartItem[]>([]);
   const [packageProtection, setPackageProtection] = useState(true);
   const protectionPrice = 493.45;
-
-  useEffect(() => {
-    fetchCart(); 
-
-    setItems(getCartItems());
-    const unsubscribe = subscribeToCart((updatedItems) => {
-      setItems(updatedItems);
-    });
-    return unsubscribe;
-  }, []);
+  const { items, subtotal, totalItems, isPending } = useCartSummary();
+  const updateQuantityMutation = useUpdateCartItemQuantityMutation();
+  const removeFromCartMutation = useRemoveFromCartMutation();
 
   const handleUpdateQuantity = (productId: string, size: string, material: string, delta: number) => {
-    updateCartItemQuantity(productId, size, material, delta);
+    updateQuantityMutation.mutate({ productId, size, material, delta });
   };
 
   const handleRemoveItem = (productId: string, size: string, material: string) => {
-    removeFromCart(productId, size, material);
+    removeFromCartMutation.mutate({ productId, size, material });
   };
 
-  const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const total = subtotal + (packageProtection ? protectionPrice : 0);
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-white pt-24 pb-12 flex items-center justify-center">
+        <div className="text-gray-500">Loading cart...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-12">

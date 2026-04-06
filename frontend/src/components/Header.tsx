@@ -4,11 +4,12 @@ import { FaTimes } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import ShoppingCartPanel from './CartPanel';
 import { Link } from 'react-router-dom';
+import { useCartSummary } from '../hooks/useStoreData';
 
 function Header() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
-  const [cartItemCount, setCartItemCount] = useState<number>(2); // Track cart items count
+  const { totalItems: cartItemCount } = useCartSummary();
 
   return (
     <>
@@ -89,7 +90,6 @@ function Header() {
       <ShoppingCartPanel 
         isOpen={isCartOpen} 
         onClose={() => setIsCartOpen(false)}
-        onCartUpdate={(count) => setCartItemCount(count)}
       />
     </>
   );

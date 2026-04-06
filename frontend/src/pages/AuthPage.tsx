@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
-import { apiFetch } from "../lib/api";
-import { fetchCart } from "../utils/cartManager";
+import { getApiErrorMessage } from "../lib/api";
+import { useLoginMutation, useRegisterMutation } from "../hooks/useStoreData";
 
 interface LoginFormProps {
   onToggle: () => void;
@@ -39,41 +39,29 @@ export default function AuthPage() {
 
 // Login Component
 function LoginForm({ onToggle }: LoginFormProps) {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const loginMutation = useLoginMutation();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     try {
-      const response = await apiFetch('/users/login', {
-        method: 'POST',
-        json: formData,
-      });
-
-      const data = await response.json();
+      const data = await loginMutation.mutateAsync(formData);
 
       if (data.success) {
-        fetchCart().catch((cartError) => {
-          console.error("Failed to load cart after login:", cartError);
+        navigate(data.data.role === 'admin' ? '/admin/dashboard' : '/', {
+          replace: true,
         });
-
-        window.location.assign(data.data.role === 'admin' ? '/admin/dashboard' : '/');
-
-      } else {
-        setError(data.message || 'Login failed');
       }
-    } catch {
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
+    } catch (submitError) {
+      setError(getApiErrorMessage(submitError, 'Login failed'));
     }
   };
 
@@ -153,10 +141,10 @@ function LoginForm({ onToggle }: LoginFormProps) {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={loading}
+          disabled={loginMutation.isPending}
           className="w-full bg-black text-white py-3 font-[Karla] font-bold text-sm tracking-wider hover:bg-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          {loading ? 'SIGNING IN...' : 'SIGN IN'}
+          {loginMutation.isPending ? 'SIGNING IN...' : 'SIGN IN'}
         </button>
 
         {/* Toggle to Signup */}
@@ -179,6 +167,7 @@ function LoginForm({ onToggle }: LoginFormProps) {
 
 // Signup Component
 function SignupForm({ onToggle }: SignupFormProps) {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -188,7 +177,7 @@ function SignupForm({ onToggle }: SignupFormProps) {
     confirmPassword: ''
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const registerMutation = useRegisterMutation();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -205,30 +194,19 @@ function SignupForm({ onToggle }: SignupFormProps) {
       return;
     }
 
-    setLoading(true);
-
     try {
-      const response = await apiFetch('/users/register', {
-        method: 'POST',
-        json: {
+      const data = await registerMutation.mutateAsync({
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
           password: formData.password
-        }
       });
 
-      const data = await response.json();
-
       if (data.success) {
-        window.location.assign('/');
-      } else {
-        setError(data.message || 'Registration failed');
+        navigate('/', { replace: true });
       }
-    } catch {
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
+    } catch (submitError) {
+      setError(getApiErrorMessage(submitError, 'Registration failed'));
     }
   };
 
@@ -351,10 +329,10 @@ function SignupForm({ onToggle }: SignupFormProps) {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={loading}
+          disabled={registerMutation.isPending}
           className="w-full bg-black text-white py-3 font-[Karla] font-bold text-sm tracking-wider hover:bg-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
+          {registerMutation.isPending ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
         </button>
 
         {/* Toggle to Login */}

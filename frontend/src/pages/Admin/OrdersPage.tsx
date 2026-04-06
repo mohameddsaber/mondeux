@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +9,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { apiFetch } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/api";
+import {
+  useAdminOrdersQuery,
+  useUpdateOrderStatusMutation,
+  useUpdatePaymentStatusMutation,
+} from "@/hooks/useStoreData";
 
 interface User {
   name: string;
@@ -39,51 +43,23 @@ interface Order {
 }
 
 export default function OrderPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchOrders = async () => {
-    try {
-      const res = await apiFetch("/orders/admin/all", {
-        method: "GET",
-      });
-      const data = await res.json();
-      if (data.success) {
-        setOrders(data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch orders:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  const ordersQuery = useAdminOrdersQuery();
+  const updateOrderStatusMutation = useUpdateOrderStatusMutation();
+  const updatePaymentStatusMutation = useUpdatePaymentStatusMutation();
+  const orders = (ordersQuery.data?.data as Order[]) || [];
+  const loading = ordersQuery.isPending;
 
   // ✅ Update delivery/status
 const handleStatusChange = async (orderId: string, newStatus: string) => {
   try {
-    const response = await apiFetch(`/orders/${orderId}/status`, {
-      method: "PATCH",
-      json: { status: newStatus },
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      // show more descriptive error if available
-      throw new Error(data.message || "Failed to update order status");
-    }
+    await updateOrderStatusMutation.mutateAsync({ orderId, status: newStatus });
 
     // ✅ Success case
     toast.success(`Order status updated to "${newStatus}"`);
-    fetchOrders(); // Refresh the order list after update
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error updating order status:", error);
-    toast.error(error.message || "Error updating status");
+    toast.error(getApiErrorMessage(error, "Error updating status"));
   }
 };
 
@@ -91,19 +67,13 @@ const handleStatusChange = async (orderId: string, newStatus: string) => {
   //  Update payment status
   const handlePaymentStatusChange = async (orderId: string, newPaymentStatus: string) => {
     try {
-      const res = await apiFetch(`/orders/${orderId}/payment-status`, {
-        method: "PATCH",
-        json: { paymentStatus: newPaymentStatus },
+      await updatePaymentStatusMutation.mutateAsync({
+        orderId,
+        paymentStatus: newPaymentStatus,
       });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Payment status updated!");
-        fetchOrders();
-      } else {
-        toast.error(data.message || "Failed to update payment status");
-      }
+      toast.success("Payment status updated!");
     } catch (err) {
-      toast.error("Error updating payment status");
+      toast.error(getApiErrorMessage(err, "Error updating payment status"));
       console.error(err);
     }
   };

@@ -2,14 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Leaf, CreditCard, Truck, MapPin, Phone, Mail, User } from 'lucide-react';
-import { 
-  type CartItem,
-  getCartItems,
-  subscribeToCart,
-  fetchCart,
-  getCartSubtotal
-} from '../utils/cartManager';
-import { apiFetch } from '../lib/api';
+import { getApiErrorMessage } from '../lib/api';
+import { useCartSummary, useCreateOrderMutation } from '../hooks/useStoreData';
 
 interface ShippingAddress {
   name: string;
@@ -29,8 +23,6 @@ interface CheckoutFormData {
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [packageProtection, setPackageProtection] = useState(true);
   const [formData, setFormData] = useState<CheckoutFormData>({
@@ -47,27 +39,12 @@ export default function CheckoutPage() {
     customerNotes: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const createOrderMutation = useCreateOrderMutation();
+  const { items, subtotal, isPending: loading } = useCartSummary();
 
   const protectionPrice = 493.45;
   const shippingCost = 0; // Free shipping
   const taxRate = 0.14; // 14% tax
-
-  useEffect(() => {
-    const loadCart = async () => {
-      setLoading(true);
-      await fetchCart();
-      setItems(getCartItems());
-      setLoading(false);
-    };
-
-    loadCart();
-
-    const unsubscribe = subscribeToCart((updatedItems) => {
-      setItems(updatedItems);
-    });
-
-    return unsubscribe;
-  }, []);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -76,7 +53,6 @@ export default function CheckoutPage() {
     }
   }, [items, loading, navigate]);
 
-  const subtotal = getCartSubtotal();
   const tax = subtotal * taxRate;
   const total = subtotal + (packageProtection ? protectionPrice : 0) + shippingCost + tax;
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -112,33 +88,23 @@ export default function CheckoutPage() {
       return;
     }
 
-    setSubmitting(true);
-
     try {
-      const response = await apiFetch('/orders', {
-        method: 'POST',
-        json: {
+      setSubmitting(true);
+      const data = await createOrderMutation.mutateAsync({
           shippingAddress: formData.shippingAddress,
           paymentMethod: formData.paymentMethod,
           shippingCost: shippingCost,
           tax: tax,
           customerNotes: formData.customerNotes
-        }
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create order');
-      }
 
       if (data.success) {
         // Redirect to order confirmation
         navigate(`/order-confirmation/${data.data._id}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating order:', error);
-      alert(error.message || 'Failed to place order. Please try again.');
+      alert(getApiErrorMessage(error, 'Failed to place order. Please try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -332,7 +298,7 @@ export default function CheckoutPage() {
                       name="paymentMethod"
                       value="cash_on_delivery"
                       checked={formData.paymentMethod === 'cash_on_delivery'}
-                      onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
+                      onChange={() => setFormData(prev => ({ ...prev, paymentMethod: 'cash_on_delivery' }))}
                       className="w-4 h-4 text-black"
                     />
                     <span className="ml-3 font-medium">Cash on Delivery</span>
@@ -347,7 +313,7 @@ export default function CheckoutPage() {
                       name="paymentMethod"
                       value="card"
                       checked={formData.paymentMethod === 'card'}
-                      onChange={(e) => setFormData(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
+                      onChange={() => setFormData(prev => ({ ...prev, paymentMethod: 'card' }))}
                       className="w-4 h-4 text-black"
                     />
                     <span className="ml-3 font-medium">Credit/Debit Card</span>

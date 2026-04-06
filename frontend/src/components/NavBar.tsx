@@ -3,11 +3,12 @@ import { Menu, Search, ShoppingBag } from 'lucide-react';
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import ShoppingCartPanel from "./CartPanel";
+import { useCartSummary } from "../hooks/useStoreData";
 
 function NavBar() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
-  const [cartItemCount, setCartItemCount] = useState<number>(2); // Track cart items count
+  const { totalItems: cartItemCount } = useCartSummary();
 
   return (
     <>
@@ -74,7 +75,6 @@ function NavBar() {
       <ShoppingCartPanel 
         isOpen={isCartOpen} 
         onClose={() => setIsCartOpen(false)}
-        onCartUpdate={(count) => setCartItemCount(count)}
       />
     </>
   );

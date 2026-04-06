@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -24,16 +23,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { DollarSign, Users, Package, Clock,FolderTree } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
+import { useAdminDashboardQueries } from '@/hooks/useStoreData';
 
-interface SalesSummary {
-  totalRevenue: number;
-  totalUnitsSold: number;
-}
-interface SalesByDate {
-  _id: string;
-  totalRevenue: number;
-}
 interface Order {
   _id: string;
   user: { name: string; email: string };
@@ -41,75 +32,6 @@ interface Order {
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: string;
 }
-
-const useAdminData = () => {
-  const [summary, setSummary] = useState<SalesSummary | null>(null);
-  const [salesData, setSalesData] = useState<SalesByDate[]>([]);
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-  const [totalUsers, setTotalUsers] = useState<number>(0);
-  const [totalProducts, setTotalProducts] = useState<number>(0);
-  const [totalCategories, setTotalCategories] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        const [
-          summaryRes,
-          salesRes,
-          ordersRes,
-          usersRes,
-          productsRes,
-          categoriesRes,
-        ] = await Promise.all([
-          apiFetch('/sales/summary'),
-          apiFetch('/sales/by-date'),
-          apiFetch('/orders/admin/all?limit=5'),
-          apiFetch('/users/admin/all?limit=1'),
-          apiFetch('/products'),
-          apiFetch('/categories'),
-        ]);
-
-        const summaryData = await summaryRes.json();
-        const salesData = await salesRes.json();
-        const ordersData = await ordersRes.json();
-        const usersData = await usersRes.json();
-        const productsData = await productsRes.json();
-        const categoriesData = await categoriesRes.json();
-
-        setSummary(summaryData);
-        setSalesData(salesData);
-        setRecentOrders(ordersData.data || []);
-        setTotalUsers(usersData.pagination?.total || usersData.total || 0);
-        setTotalProducts(productsData.pagination?.total || productsData.total || productsData.data?.length || 0);
-        setTotalCategories(categoriesData.pagination?.total || categoriesData.total || categoriesData.data?.length || 0);
-      } catch (error) {
-        console.error('Error fetching admin data:', error);
-
-        setSummary({ totalRevenue: 1250000.75, totalUnitsSold: 4500 });
-        setTotalUsers(1200);
-        setTotalProducts(200);
-        setTotalCategories(10);
-        setSalesData([
-          { _id: '2024-06-01', totalRevenue: 10000 },
-          { _id: '2024-06-02', totalRevenue: 15000 },
-          { _id: '2024-06-03', totalRevenue: 22000 },
-          { _id: '2024-06-04', totalRevenue: 18000 },
-          { _id: '2024-06-05', totalRevenue: 35000 },
-        ]);
-        setRecentOrders([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAllData();
-  }, []);
-
-  return { summary, salesData, recentOrders, totalUsers, totalProducts, totalCategories, loading };
-};
-
-
 
 const formatCurrency = (amount: number) =>
   `LE ${Number(amount || 0).toLocaleString('en-US', {
@@ -145,13 +67,33 @@ const getStatusBadge = (status: Order['status']) => {
 };
 
 export default function AdminDashboardPage() {
-const { summary, salesData, recentOrders, totalUsers, totalProducts, totalCategories, loading } =
-  useAdminData();
+const {
+  summaryQuery,
+  salesByDateQuery,
+  ordersQuery,
+  usersQuery,
+  productsQuery,
+  categoriesQuery,
+} = useAdminDashboardQueries();
+
+  const loading = [
+    summaryQuery,
+    salesByDateQuery,
+    ordersQuery,
+    usersQuery,
+    productsQuery,
+    categoriesQuery,
+  ].some((query) => query.isPending);
+  const summary = summaryQuery.data || { totalRevenue: 0, totalUnitsSold: 0 };
+  const salesData = salesByDateQuery.data || [];
+  const recentOrders = (ordersQuery.data?.data as Order[]) || [];
+  const totalUsers = usersQuery.data?.data?.length || 0;
+  const totalProducts = productsQuery.data?.data?.length || 0;
+  const totalCategories = categoriesQuery.data?.data?.length || 0;
 
   const totalRevenue = summary?.totalRevenue || 0;
   const totalUnitsSold = summary?.totalUnitsSold || 0;
   const growthRate = 0.15;
-console.log(salesData);
   const chartData = salesData.map((d) => ({
     date: new Date(d._id).toLocaleDateString('en-US', {
       month: 'short',
@@ -444,7 +386,6 @@ console.log(salesData);
     </div>
   );
 }
-
 
 
 

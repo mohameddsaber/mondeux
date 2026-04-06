@@ -3,16 +3,12 @@ import { useState, useEffect } from "react";
 import FilterSidebar from "../components/FilterSidebar.tsx"
 import { Plus, Minus } from "lucide-react";
 import { Link,useLocation } from "react-router-dom";
-import { apiFetch } from "../lib/api";
+import { getApiErrorMessage } from "../lib/api";
+import { useProductsQuery } from "../hooks/useStoreData";
 
 
 
 const ProductsPage: React.FC = () => {
-
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
   const availabilityOptions = ["In Stock", "Out of Stock", "Pre-Order"];
@@ -50,49 +46,12 @@ const [sortBy, setSortBy] = useState<string>("best-selling");
   };
 
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      setError(null);
-      
-      let sortQuery = '';
-      let endpoint = '';
-      
-      if (sortBy === 'featured') {
-
-        endpoint = `/products/featured?limit=20`; 
-      } else if (sortBy === 'best-selling') {
-
-        sortQuery = 'sort=popular'; 
-        endpoint = `/products?limit=20&${sortQuery}`;
-      } else {
-
-        sortQuery = `sort=${sortBy}`;
-        endpoint = `/products?limit=20&${sortQuery}`;
-      }
-
-      try {
-        const response = await apiFetch(endpoint);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const result = await response.json();
-        
-        setProducts(result.data || []); 
-      } catch (e) {
-        if (e instanceof Error) {
-            setError(e.message);
-        } else {
-            setError('An unknown error occurred.');
-        }
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [sortBy]); 
+  const productsQuery = useProductsQuery(sortBy);
+  const products: Product[] = productsQuery.data?.data || [];
+  const loading = productsQuery.isPending;
+  const error = productsQuery.error
+    ? getApiErrorMessage(productsQuery.error, "Failed to fetch products")
+    : null;
 
 
   return (

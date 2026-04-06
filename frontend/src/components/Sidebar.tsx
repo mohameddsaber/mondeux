@@ -1,7 +1,8 @@
 import {  Search, Plus } from 'lucide-react';
 import {  useState } from "react";
 import { Link } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
+import { getApiErrorMessage } from '../lib/api';
+import { useLogoutMutation } from '../hooks/useStoreData';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface SidebarProps {
 function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [searchValue, setSearchValue] = useState<string>("");
   const [expandedMenus, setExpandedMenus] = useState<{[key: string]: boolean}>({});
+  const logoutMutation = useLogoutMutation();
   
   const baseText = "font-bold font-[Karla] tracking-wider text-[12px] text-[#121212]";
   const itemPadding = "pb-4";
@@ -33,21 +35,10 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
   };
   const handleLogout = async () => {
   try {
-    const res = await apiFetch('/users/logout', {
-      method: "POST",
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      console.log("Logged out successfully");
-      window.location.reload();
-
-    } else {
-      console.error(data.message || "Logout failed");
-    }
+    await logoutMutation.mutateAsync();
+    window.location.assign("/");
   } catch (error) {
-    console.error("Error logging out:", error);
+    console.error("Error logging out:", getApiErrorMessage(error, "Logout failed"));
   }
 };
 
