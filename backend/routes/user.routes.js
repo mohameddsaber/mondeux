@@ -1,4 +1,6 @@
 import express from 'express';
+import { validateRequest } from '../middleware/validateRequest.js';
+import { loginSchema, registerSchema } from '../validation/requestSchemas.js';
 import {
   register,
   login,
@@ -22,8 +24,8 @@ import { protect, admin } from '../middleware/auth.js';
 const router = express.Router();
 
 // Public routes
-router.post('/register', register);
-router.post('/login', login);
+router.post('/register', validateRequest(registerSchema), register);
+router.post('/login', validateRequest(loginSchema), login);
 
 
 

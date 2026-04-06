@@ -1,4 +1,6 @@
 import express from 'express';
+import { validateRequest } from '../middleware/validateRequest.js';
+import { createProductSchema, updateProductSchema } from '../validation/requestSchemas.js';
 import {
     getAllProducts,
     getFeaturedProducts,
@@ -27,8 +29,8 @@ router.get('/category/:categorySlug/:subCategorySlug', getProductsByCategoryAndS
 router.get('/:slug', getProductBySlug);
 
 // Admin routes
-router.post('/', protect, admin, createProduct); 
-router.put('/:id', protect, admin, updateProduct); 
+router.post('/', protect, admin, validateRequest(createProductSchema), createProduct); 
+router.put('/:id', protect, admin, validateRequest(updateProductSchema), updateProduct); 
 router.delete('/:id', protect, admin, deleteProduct); 
 
 export default router;

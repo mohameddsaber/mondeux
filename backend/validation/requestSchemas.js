@@ -1,0 +1,205 @@
+import { z } from 'zod';
+
+const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id format');
+const optionalTrimmedString = z.string().trim().optional();
+const optionalNullableNumber = z.coerce.number().min(0).nullable().optional();
+
+const emptyRequestSchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({}).passthrough(),
+  query: z.object({}).passthrough(),
+});
+
+const materialEnum = z.enum(['gold', 'silver', 'stainless steel']);
+const paymentMethodEnum = z.enum(['card', 'cash_on_delivery']);
+const orderStatusEnum = z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']);
+const paymentStatusEnum = z.enum(['pending', 'paid', 'failed', 'refunded']);
+
+const sizeVariantSchema = z.object({
+  label: z.string().trim().min(1, 'Size label is required'),
+  sku: z.string().trim().min(1, 'SKU is required'),
+  stock: z.coerce.number().int().min(0, 'Stock must be 0 or greater'),
+  price: optionalNullableNumber,
+  isAvailable: z.boolean().optional(),
+});
+
+const materialVariantSchema = z.object({
+  material: materialEnum,
+  metalPurity: optionalTrimmedString,
+  weight: optionalNullableNumber,
+  price: z.coerce.number().min(0, 'Price must be 0 or greater'),
+  compareAtPrice: optionalNullableNumber,
+  costPrice: optionalNullableNumber,
+  stock: z.coerce.number().int().min(0).optional(),
+  sizeVariants: z.array(sizeVariantSchema).min(1, 'At least one size variant is required'),
+});
+
+const imageSchema = z.object({
+  url: z.string().trim().url('Image URL must be valid'),
+  alt: optionalTrimmedString,
+  isPrimary: z.boolean().optional(),
+});
+
+const shippingAddressSchema = z.object({
+  name: z.string().trim().min(1, 'Recipient name is required'),
+  street: z.string().trim().min(1, 'Street is required'),
+  city: z.string().trim().min(1, 'City is required'),
+  state: optionalTrimmedString,
+  zipCode: z.string().trim().min(1, 'Zip code is required'),
+  country: z.string().trim().min(1).optional(),
+  phone: z.string().trim().min(1, 'Phone is required'),
+});
+
+const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).optional(),
+  status: orderStatusEnum.optional(),
+}).passthrough();
+
+export const registerSchema = z.object({
+  body: z.object({
+    name: z.string().trim().min(1, 'Name is required'),
+    email: z.string().trim().email('Email must be valid'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    phone: optionalTrimmedString,
+  }),
+  params: z.object({}),
+  query: z.object({}),
+});
+
+export const loginSchema = z.object({
+  body: z.object({
+    email: z.string().trim().email('Email must be valid'),
+    password: z.string().min(1, 'Password is required'),
+  }),
+  params: z.object({}),
+  query: z.object({}),
+});
+
+export const addToCartSchema = z.object({
+  body: z.object({
+    productId: objectIdSchema,
+    quantity: z.coerce.number().int().min(1).default(1),
+    size: z.string().trim().min(1, 'Size is required'),
+    material: z.string().trim().min(1, 'Material is required'),
+  }),
+  params: z.object({}),
+  query: z.object({}),
+});
+
+export const updateCartItemSchema = z.object({
+  body: z.object({
+    size: z.string().trim().min(1, 'Size is required'),
+    material: z.string().trim().min(1, 'Material is required'),
+    delta: z.coerce.number().int().refine((value) => value !== 0, {
+      message: 'Delta must be a non-zero integer',
+    }),
+  }),
+  params: z.object({
+    productId: objectIdSchema,
+  }),
+  query: z.object({}),
+});
+
+export const removeCartItemSchema = z.object({
+  body: z.object({
+    size: z.string().trim().min(1, 'Size is required'),
+    material: z.string().trim().min(1, 'Material is required'),
+  }),
+  params: z.object({
+    productId: objectIdSchema,
+  }),
+  query: z.object({}),
+});
+
+export const createOrderSchema = z.object({
+  body: z.object({
+    shippingAddress: shippingAddressSchema,
+    paymentMethod: paymentMethodEnum,
+    shippingCost: z.coerce.number().min(0).optional().default(0),
+    tax: z.coerce.number().min(0).optional().default(0),
+    customerNotes: z.string().optional().default(''),
+  }),
+  params: z.object({}),
+  query: z.object({}),
+});
+
+export const orderIdParamSchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({
+    id: objectIdSchema,
+  }),
+  query: z.object({}).passthrough(),
+});
+
+export const orderListQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({}).passthrough(),
+  query: paginationQuerySchema,
+});
+
+export const updateOrderStatusSchema = z.object({
+  body: z.object({
+    status: orderStatusEnum,
+  }),
+  params: z.object({
+    id: objectIdSchema,
+  }),
+  query: z.object({}),
+});
+
+export const updatePaymentStatusSchema = z.object({
+  body: z.object({
+    paymentStatus: paymentStatusEnum,
+  }),
+  params: z.object({
+    id: objectIdSchema,
+  }),
+  query: z.object({}),
+});
+
+export const updateShippingInfoSchema = z.object({
+  body: z.object({
+    trackingNumber: optionalTrimmedString,
+    shippingProvider: optionalTrimmedString,
+  }).refine(
+    (value) => Boolean(value.trackingNumber || value.shippingProvider),
+    'At least one shipping field is required'
+  ),
+  params: z.object({
+    id: objectIdSchema,
+  }),
+  query: z.object({}),
+});
+
+export const createProductSchema = z.object({
+  body: z.object({
+    name: z.string().trim().min(1, 'Name is required'),
+    slug: z.string().trim().min(1, 'Slug is required'),
+    description: z.string().trim().min(1, 'Description is required'),
+    images: z.array(imageSchema).default([]),
+    category: objectIdSchema,
+    subCategory: objectIdSchema,
+    materialVariants: z.array(materialVariantSchema).min(1, 'At least one material variant is required'),
+    tags: z.array(z.string().trim()).optional().default([]),
+    isActive: z.boolean().optional(),
+    isFeatured: z.boolean().optional(),
+    lowStockThreshold: z.coerce.number().int().min(0).optional(),
+    metaTitle: optionalTrimmedString,
+    metaDescription: optionalTrimmedString,
+    rating: z.coerce.number().min(0).max(5).optional(),
+    numReviews: z.coerce.number().int().min(0).optional(),
+  }),
+  params: z.object({}),
+  query: z.object({}),
+});
+
+export const updateProductSchema = z.object({
+  body: createProductSchema.shape.body.partial(),
+  params: z.object({
+    id: objectIdSchema,
+  }),
+  query: z.object({}),
+});
+
+export const passthroughSchema = emptyRequestSchema;
