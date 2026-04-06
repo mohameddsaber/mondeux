@@ -35,9 +35,9 @@ const assignRequestValue = (req, key, value) => {
 export const validateRequest = (schema) => (req, res, next) => {
   try {
     const result = schema.safeParse({
-      body: req.body,
-      params: req.params,
-      query: req.query,
+      body: req.body ?? {},
+      params: req.params ?? {},
+      query: req.query ?? {},
     });
 
     if (!result.success) {

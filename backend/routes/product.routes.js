@@ -1,6 +1,13 @@
 import express from 'express';
 import { validateRequest } from '../middleware/validateRequest.js';
-import { createProductSchema, updateProductSchema } from '../validation/requestSchemas.js';
+import {
+    categoryAndSubCategoryProductsQuerySchema,
+    categoryProductsQuerySchema,
+    createProductSchema,
+    productListQuerySchema,
+    subCategoryProductsQuerySchema,
+    updateProductSchema,
+} from '../validation/requestSchemas.js';
 import {
     getAllProducts,
     getFeaturedProducts,
@@ -20,12 +27,12 @@ import { protect, admin } from '../middleware/auth.js';
 const router = express.Router();
 
 //public routes
-router.get('/', getAllProducts); 
+router.get('/', validateRequest(productListQuerySchema), getAllProducts); 
 router.get('/featured', getFeaturedProducts);
-router.get('/search', searchProducts);
-router.get('/category/:categorySlug', getProductsByCategory); 
-router.get('/subcategory/:subCategorySlug', getProductsBySubCategory);
-router.get('/category/:categorySlug/:subCategorySlug', getProductsByCategoryAndSubCategory);
+router.get('/search', validateRequest(productListQuerySchema), searchProducts);
+router.get('/category/:categorySlug', validateRequest(categoryProductsQuerySchema), getProductsByCategory); 
+router.get('/subcategory/:subCategorySlug', validateRequest(subCategoryProductsQuerySchema), getProductsBySubCategory);
+router.get('/category/:categorySlug/:subCategorySlug', validateRequest(categoryAndSubCategoryProductsQuerySchema), getProductsByCategoryAndSubCategory);
 router.get('/:slug', getProductBySlug);
 
 // Admin routes

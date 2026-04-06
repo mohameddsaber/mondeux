@@ -1,466 +1,684 @@
-
 import Product from '../models/product.model.js';
 import Category from '../models/category.model.js';
 import SubCategory from '../models/subCategory.model.js';
 
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 20;
 
-export const getAllProducts = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
+const splitCsvValue = (value) => {
+  if (typeof value !== 'string') {
+    return [];
+  }
 
-    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : null;
-    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : null;
-    const materialFilter = req.query.material;
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
 
-    // --- Aggregation Pipeline Setup ---
-    const pipeline = [];
+const toNullableNumber = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
 
-    // Stage 1: Base Filter
-    const baseFilter = { isActive: true };
-    if (materialFilter) {
-      baseFilter['materialVariants.material'] = materialFilter;
-    }
-    pipeline.push({ $match: baseFilter });
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+};
 
-    // Stage 2: Extract the 'silver' variant's price
-    // We assume 'silver' is always present, so we filter the materialVariants array
-    // to find the silver object, and then take the first element (the silver variant).
-    pipeline.push({
-        $addFields: {
-            silverPrice: {
-                $arrayElemAt: [
-                    {
-                        $filter: {
-                            input: '$materialVariants',
-                            as: 'variant',
-                            cond: { $eq: ['$$variant.material', 'silver'] }
-                        }
-                    },
-                    0
-                ]
-            }
-        }
-    });
+const getCatalogSort = (requestedSort, hasSearchQuery) => {
+  if (requestedSort) {
+    return requestedSort === 'best-selling' ? 'popular' : requestedSort;
+  }
 
-    // Stage 3: Promote the price to a top-level field for easy sorting/filtering
-    pipeline.push({
-        $addFields: {
-            silverPrice: '$silverPrice.price'
-        }
-    });
+  return hasSearchQuery ? 'relevance' : 'newest';
+};
 
-    // Stage 4: Apply Price Range Filter using the extracted silverPrice
-    if (minPrice || maxPrice) {
-      const priceFilter = {};
-      if (minPrice) priceFilter.$gte = minPrice;
-      if (maxPrice) priceFilter.$lte = maxPrice;
-      
-      pipeline.push({ $match: { silverPrice: priceFilter } });
-    }
-
-    // Stage 5: Sorting
-    const sortStage = {};
-    if (req.query.sort === 'price_asc') sortStage.silverPrice = 1;
-    else if (req.query.sort === 'price_desc') sortStage.silverPrice = -1;
-    else if (req.query.sort === 'newest') sortStage.createdAt = -1;
-    else if (req.query.sort === 'popular') sortStage.numReviews = -1;
-    else sortStage.createdAt = -1; 
-
-    pipeline.push({ $sort: sortStage });
-    
-    // --- Pagination and Count ---
-    const countPipeline = [...pipeline, { $count: 'total' }];
-    const totalResult = await Product.aggregate(countPipeline);
-    const total = totalResult.length > 0 ? totalResult[0].total : 0;
-    
-    // Add pagination stages
-    pipeline.push({ $skip: skip });
-    pipeline.push({ $limit: limit });
-    
-    // --- Manual Population (using $lookup) ---
-    // (Ensure you have Category and SubCategory models imported)
-    pipeline.push(
-        { $lookup: { from: 'categories', localField: 'category', foreignField: '_id', as: 'category' } },
-        { $unwind: '$category' },
-        { $lookup: { from: 'subcategories', localField: 'subCategory', foreignField: '_id', as: 'subCategory' } },
-        { $unwind: '$subCategory' }
-    );
-
-    // Stage 6: Final Projection
-    pipeline.push({ 
-        $project: { 
-            __v: 0, 
-            silverPrice: 0, // Exclude the temporary field
-            'category.description': 0, 
-            'subCategory.description': 0 
-        } 
-    });
-    
-    const products = await Product.aggregate(pipeline);
-
-    // Re-map the populated category/subcategory for clean output
-    const finalProducts = products.map(p => ({
-        ...p,
-        category: { name: p.category.name, slug: p.category.slug },
-        subCategory: { name: p.subCategory.name, slug: p.subCategory.slug },
-    }));
-
-
-    res.json({
-      success: true,
-      data: finalProducts, 
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
-  } catch (error) {
-    console.error("Aggregation Error in getAllProducts:", error);
-    res.status(500).json({ success: false, message: error.message });
+const getCatalogSortStage = (sort) => {
+  switch (sort) {
+    case 'featured':
+      return { isFeatured: -1, createdAt: -1 };
+    case 'price_asc':
+      return { minVariantPrice: 1, createdAt: -1 };
+    case 'price_desc':
+      return { minVariantPrice: -1, createdAt: -1 };
+    case 'popular':
+      return { numReviews: -1, rating: -1, createdAt: -1 };
+    case 'relevance':
+      return { searchScore: -1, isFeatured: -1, createdAt: -1 };
+    case 'newest':
+    default:
+      return { createdAt: -1 };
   }
 };
 
+const getAvailabilityFilterStages = (selectedAvailability) => {
+  const availabilitySet = new Set(selectedAvailability);
+
+  if (
+    availabilitySet.size === 0
+    || (availabilitySet.has('in_stock') && availabilitySet.has('out_of_stock'))
+  ) {
+    return [];
+  }
+
+  if (availabilitySet.has('in_stock')) {
+    return [{ $match: { totalStock: { $gt: 0 } } }];
+  }
+
+  return [{ $match: { totalStock: { $lte: 0 } } }];
+};
+
+const toCatalogRef = (value) => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  if (!value.name || !value.slug) {
+    return null;
+  }
+
+  return {
+    name: value.name,
+    slug: value.slug,
+  };
+};
+
+const formatCatalogProduct = (
+  product,
+  {
+    categoryOverride = null,
+    subCategoryOverride = null,
+  } = {}
+) => ({
+  ...product,
+  category: toCatalogRef(categoryOverride) || toCatalogRef(product.category),
+  subCategory: toCatalogRef(subCategoryOverride) || toCatalogRef(product.subCategory),
+});
+
+const mapAvailabilityFacet = (facet = []) => facet.map((item) => ({
+  value: item.value,
+  label: item.value === 'in_stock' ? 'In Stock' : 'Out of Stock',
+  count: item.count,
+}));
+
+const createCatalogError = (status, message) => {
+  const error = new Error(message);
+  error.statusCode = status;
+  return error;
+};
+
+const resolveCategoryContext = async (categorySlug) => {
+  if (!categorySlug) {
+    return null;
+  }
+
+  const category = await Category.findOne({
+    slug: categorySlug,
+    isActive: true,
+  })
+    .select('name slug description')
+    .lean();
+
+  if (!category) {
+    throw createCatalogError(404, 'Category not found');
+  }
+
+  return category;
+};
+
+const resolveSubCategoryContext = async (subCategorySlug, categoryId = null) => {
+  if (!subCategorySlug) {
+    return null;
+  }
+
+  const match = {
+    slug: subCategorySlug,
+    isActive: true,
+  };
+
+  if (categoryId) {
+    match.category = categoryId;
+  }
+
+  const subCategory = await SubCategory.findOne(match)
+    .populate('category', 'name slug description')
+    .select('name slug description category')
+    .lean();
+
+  if (!subCategory) {
+    throw createCatalogError(404, 'Subcategory not found');
+  }
+
+  return subCategory;
+};
+
+const getCatalogComputedFieldsStage = (hasSearchQuery) => {
+  const stage = {
+    minVariantPrice: {
+      $min: {
+        $map: {
+          input: { $ifNull: ['$materialVariants', []] },
+          as: 'variant',
+          in: '$$variant.price',
+        },
+      },
+    },
+    totalStock: {
+      $sum: {
+        $map: {
+          input: { $ifNull: ['$materialVariants', []] },
+          as: 'variant',
+          in: { $ifNull: ['$$variant.stock', 0] },
+        },
+      },
+    },
+  };
+
+  if (hasSearchQuery) {
+    stage.searchScore = { $meta: 'textScore' };
+  }
+
+  return { $addFields: stage };
+};
+
+const createFacetPipeline = ({
+  includeCategories = true,
+  includeSubCategories = true,
+}) => {
+  const facets = {
+    materials: [
+      { $unwind: '$materialVariants' },
+      {
+        $group: {
+          _id: '$materialVariants.material',
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      {
+        $project: {
+          _id: 0,
+          value: '$_id',
+          label: '$_id',
+          count: 1,
+        },
+      },
+    ],
+    availability: [
+      {
+        $group: {
+          _id: {
+            $cond: [{ $gt: ['$totalStock', 0] }, 'in_stock', 'out_of_stock'],
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          value: '$_id',
+          count: 1,
+        },
+      },
+    ],
+    priceRange: [
+      {
+        $group: {
+          _id: null,
+          min: { $min: '$minVariantPrice' },
+          max: { $max: '$minVariantPrice' },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          min: 1,
+          max: 1,
+        },
+      },
+    ],
+  };
+
+  if (includeCategories) {
+    facets.categories = [
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      {
+        $lookup: {
+          from: 'categories',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'category',
+        },
+      },
+      { $unwind: '$category' },
+      {
+        $project: {
+          _id: 0,
+          value: '$category.slug',
+          label: '$category.name',
+          count: 1,
+        },
+      },
+    ];
+  }
+
+  if (includeSubCategories) {
+    facets.subCategories = [
+      {
+        $group: {
+          _id: '$subCategory',
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      {
+        $lookup: {
+          from: 'subcategories',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'subCategory',
+        },
+      },
+      { $unwind: '$subCategory' },
+      {
+        $project: {
+          _id: 0,
+          value: '$subCategory.slug',
+          label: '$subCategory.name',
+          count: 1,
+        },
+      },
+    ];
+  }
+
+  return facets;
+};
+
+const getCatalogDataPipeline = ({
+  sort,
+  skip,
+  limit,
+  includeCategoryLookup,
+  includeSubCategoryLookup,
+}) => {
+  const pipeline = [
+    { $sort: getCatalogSortStage(sort) },
+    { $skip: skip },
+    { $limit: limit },
+  ];
+
+  if (includeCategoryLookup) {
+    pipeline.push(
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'category',
+          foreignField: '_id',
+          as: 'category',
+        },
+      },
+      {
+        $unwind: {
+          path: '$category',
+          preserveNullAndEmptyArrays: true,
+        },
+      }
+    );
+  }
+
+  if (includeSubCategoryLookup) {
+    pipeline.push(
+      {
+        $lookup: {
+          from: 'subcategories',
+          localField: 'subCategory',
+          foreignField: '_id',
+          as: 'subCategory',
+        },
+      },
+      {
+        $unwind: {
+          path: '$subCategory',
+          preserveNullAndEmptyArrays: true,
+        },
+      }
+    );
+  }
+
+  pipeline.push({
+    $project: {
+      __v: 0,
+      minVariantPrice: 0,
+      totalStock: 0,
+      searchScore: 0,
+      'category.description': 0,
+      'subCategory.description': 0,
+    },
+  });
+
+  return pipeline;
+};
+
+const getCatalogPayload = async ({
+  req,
+  scopedCategorySlug = '',
+  scopedSubCategorySlug = '',
+}) => {
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  const page = Number(req.query.page || DEFAULT_PAGE);
+  const limit = Number(req.query.limit || DEFAULT_LIMIT);
+  const skip = (page - 1) * limit;
+  const selectedCategorySlug = scopedCategorySlug || (typeof req.query.category === 'string' ? req.query.category.trim() : '');
+  const selectedSubCategorySlug = scopedSubCategorySlug || (typeof req.query.subCategory === 'string' ? req.query.subCategory.trim() : '');
+  const selectedMaterials = splitCsvValue(req.query.material);
+  const selectedAvailability = splitCsvValue(req.query.availability);
+  const minPrice = toNullableNumber(req.query.minPrice);
+  const maxPrice = toNullableNumber(req.query.maxPrice);
+  const hasScopedCategory = Boolean(scopedCategorySlug);
+  const hasScopedSubCategory = Boolean(scopedSubCategorySlug);
+  const sort = getCatalogSort(
+    typeof req.query.sort === 'string' ? req.query.sort : '',
+    Boolean(q)
+  );
+
+  const categoryContext = await resolveCategoryContext(selectedCategorySlug);
+  const subCategoryContext = await resolveSubCategoryContext(
+    selectedSubCategorySlug,
+    categoryContext?._id || null
+  );
+
+  const effectiveCategory =
+    categoryContext
+    || (subCategoryContext?.category && typeof subCategoryContext.category === 'object'
+      ? subCategoryContext.category
+      : null);
+
+  const baseMatch = {
+    isActive: true,
+  };
+
+  if (q) {
+    baseMatch.$text = { $search: q };
+  }
+
+  if (effectiveCategory?._id) {
+    baseMatch.category = effectiveCategory._id;
+  }
+
+  if (subCategoryContext?._id) {
+    baseMatch.subCategory = subCategoryContext._id;
+  }
+
+  if (selectedMaterials.length > 0) {
+    baseMatch['materialVariants.material'] = {
+      $in: selectedMaterials,
+    };
+  }
+
+  const catalogPipeline = [
+    { $match: baseMatch },
+    getCatalogComputedFieldsStage(Boolean(q)),
+  ];
+
+  if (minPrice !== null || maxPrice !== null) {
+    const priceMatch = {};
+
+    if (minPrice !== null) {
+      priceMatch.$gte = minPrice;
+    }
+
+    if (maxPrice !== null) {
+      priceMatch.$lte = maxPrice;
+    }
+
+    catalogPipeline.push({
+      $match: {
+        minVariantPrice: priceMatch,
+      },
+    });
+  }
+
+  catalogPipeline.push(...getAvailabilityFilterStages(selectedAvailability));
+
+  const includeCategoryLookup = !(hasScopedCategory || hasScopedSubCategory);
+  const includeSubCategoryLookup = !hasScopedSubCategory;
+  const facetPipeline = createFacetPipeline({
+    includeCategories: !(hasScopedCategory || hasScopedSubCategory),
+    includeSubCategories: !hasScopedSubCategory,
+  });
+
+  const [catalogResult] = await Product.aggregate([
+    ...catalogPipeline,
+    {
+      $facet: {
+        data: getCatalogDataPipeline({
+          sort,
+          skip,
+          limit,
+          includeCategoryLookup,
+          includeSubCategoryLookup,
+        }),
+        total: [{ $count: 'total' }],
+        ...facetPipeline,
+      },
+    },
+  ]);
+
+  const total = catalogResult?.total?.[0]?.total || 0;
+  const finalProducts = (catalogResult?.data || []).map((product) =>
+    formatCatalogProduct(product, {
+      categoryOverride: effectiveCategory || null,
+      subCategoryOverride: subCategoryContext || null,
+    })
+  );
+  const priceRange = catalogResult?.priceRange?.[0] || {
+    min: 0,
+    max: 0,
+  };
+
+  return {
+    success: true,
+    query: q,
+    category: effectiveCategory
+      ? {
+        name: effectiveCategory.name,
+        slug: effectiveCategory.slug,
+        description: effectiveCategory.description,
+      }
+      : undefined,
+    subCategory: subCategoryContext
+      ? {
+        name: subCategoryContext.name,
+        slug: subCategoryContext.slug,
+        description: subCategoryContext.description,
+      }
+      : undefined,
+    data: finalProducts,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+    filters: {
+      q,
+      sort,
+      category: selectedCategorySlug,
+      subCategory: selectedSubCategorySlug,
+      materials: selectedMaterials,
+      availability: selectedAvailability,
+      minPrice,
+      maxPrice,
+    },
+    facets: {
+      categories: catalogResult?.categories || [],
+      subCategories: catalogResult?.subCategories || [],
+      materials: catalogResult?.materials || [],
+      availability: mapAvailabilityFacet(catalogResult?.availability || []),
+      priceRange: {
+        min: Number(priceRange.min || 0),
+        max: Number(priceRange.max || 0),
+      },
+    },
+  };
+};
+
+const handleCatalogError = (res, error) => {
+  if (error?.statusCode) {
+    return res.status(error.statusCode).json({
+      success: false,
+      message: error.message,
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: error.message,
+  });
+};
+
+export const getAllProducts = async (req, res) => {
+  try {
+    const payload = await getCatalogPayload({ req });
+    res.json(payload);
+  } catch (error) {
+    console.error('Catalog Error in getAllProducts:', error);
+    handleCatalogError(res, error);
+  }
+};
 
 export const getProductsByCategory = async (req, res) => {
   try {
-    const { categorySlug } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
-
-    // First, find the category by slug
-    const category = await Category.findOne({ slug: categorySlug, isActive: true });
-    
-    if (!category) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Category not found' 
-      });
-    }
-
-    // Build filter with category ID (indexed field - fast query!)
-    // This will automatically get ALL products where category matches,
-    // regardless of their subcategory - NO RECURSION NEEDED!
-    const filter = { 
-      category: category._id, 
-      isActive: true 
-    };
-
-    // Add additional filters
-    if (req.query.minPrice || req.query.maxPrice) {
-      filter.price = {};
-      if (req.query.minPrice) filter.price.$gte = parseFloat(req.query.minPrice);
-      if (req.query.maxPrice) filter.price.$lte = parseFloat(req.query.maxPrice);
-    }
-
-    // Optional: Filter by specific subcategory if provided
-    if (req.query.subCategory) {
-      const subCategory = await SubCategory.findOne({ 
-        slug: req.query.subCategory,
-        category: category._id 
-      });
-      if (subCategory) {
-        filter.subCategory = subCategory._id;
-      }
-    }
-
-    // Sort options
-    const sortOptions = {};
-    if (req.query.sort === 'price_asc') sortOptions.price = 1;
-    else if (req.query.sort === 'price_desc') sortOptions.price = -1;
-    else sortOptions.createdAt = -1;
-
-    const products = await Product.find(filter)
-      .populate('subCategory', 'name slug')
-      .sort(sortOptions)
-      .limit(limit)
-      .skip(skip)
-      .select('-__v');
-
-    const total = await Product.countDocuments(filter);
-
-    // Get all subcategories for this category (for filter sidebar)
-    // This also shows the user what subcategories exist
-    const subCategories = await SubCategory.find({ 
-      category: category._id, 
-      isActive: true 
-    }).select('name slug');
-
-    // Optional: Get product count per subcategory for better UX
-    const subCategoryStats = await Promise.all(
-      subCategories.map(async (subCat) => {
-        const count = await Product.countDocuments({
-          subCategory: subCat._id,
-          isActive: true
-        });
-        return {
-          ...subCat.toObject(),
-          productCount: count
-        };
-      })
-    );
-
-    res.json({
-      success: true,
-      category: {
-        name: category.name,
-        slug: category.slug,
-        description: category.description
-      },
-      subCategories: subCategoryStats,
-      data: products,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
+    const payload = await getCatalogPayload({
+      req,
+      scopedCategorySlug: req.params.categorySlug,
     });
+    res.json(payload);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleCatalogError(res, error);
   }
 };
 
 export const getProductsBySubCategory = async (req, res) => {
   try {
-    const { subCategorySlug } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
-
-    const subCategory = await SubCategory.findOne({ 
-      slug: subCategorySlug, 
-      isActive: true 
-    }).populate('category', 'name slug');
-    
-    if (!subCategory) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Subcategory not found' 
-      });
-    }
-
-    const filter = { 
-      subCategory: subCategory._id, 
-      isActive: true 
-    };
-
-    if (req.query.minPrice || req.query.maxPrice) {
-      filter.price = {};
-      if (req.query.minPrice) filter.price.$gte = parseFloat(req.query.minPrice);
-      if (req.query.maxPrice) filter.price.$lte = parseFloat(req.query.maxPrice);
-    }
-
-    const sortOptions = {};
-    if (req.query.sort === 'price_asc') sortOptions.price = 1;
-    else if (req.query.sort === 'price_desc') sortOptions.price = -1;
-    else sortOptions.createdAt = -1;
-
-    const products = await Product.find(filter)
-      .sort(sortOptions)
-      .limit(limit)
-      .skip(skip)
-      .select('-__v');
-
-    const total = await Product.countDocuments(filter);
-
-    res.json({
-      success: true,
-      category: subCategory.category,
-      subCategory: {
-        name: subCategory.name,
-        slug: subCategory.slug,
-        description: subCategory.description
-      },
-      data: products,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
+    const payload = await getCatalogPayload({
+      req,
+      scopedSubCategorySlug: req.params.subCategorySlug,
     });
+    res.json(payload);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleCatalogError(res, error);
   }
 };
 
 export const getProductsByCategoryAndSubCategory = async (req, res) => {
   try {
-    const { categorySlug, subCategorySlug } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
-
-    // Find category
-    const category = await Category.findOne({ slug: categorySlug, isActive: true });
-    if (!category) {
-      return res.status(404).json({ success: false, message: 'Category not found' });
-    }
-
-    // Find subcategory that belongs to this category
-    const subCategory = await SubCategory.findOne({ 
-      slug: subCategorySlug, 
-      category: category._id,
-      isActive: true 
+    const payload = await getCatalogPayload({
+      req,
+      scopedCategorySlug: req.params.categorySlug,
+      scopedSubCategorySlug: req.params.subCategorySlug,
     });
-    
-    if (!subCategory) {
-      return res.status(404).json({ success: false, message: 'Subcategory not found' });
-    }
-
-    // Query using compound index (category + subCategory)
-    const filter = { 
-      category: category._id,
-      subCategory: subCategory._id,
-      isActive: true 
-    };
-
-    const products = await Product.find(filter)
-      .limit(limit)
-      .skip(skip)
-      .select('-__v');
-
-    const total = await Product.countDocuments(filter);
-
-    res.json({
-      success: true,
-      category: { name: category.name, slug: category.slug },
-      subCategory: { name: subCategory.name, slug: subCategory.slug },
-      data: products,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
+    res.json(payload);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleCatalogError(res, error);
   }
 };
 
 export const searchProducts = async (req, res) => {
   try {
-    const { q } = req.query;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
+    const searchQuery = typeof req.query.q === 'string' ? req.query.q.trim() : '';
 
-    if (!q) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Search query is required' 
+    if (!searchQuery) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required',
       });
     }
 
-    // Text search using index
-    const products = await Product.find({
-      $text: { $search: q },
-      isActive: true
-    })
-    .populate('category', 'name slug')
-    .populate('subCategory', 'name slug')
-    .limit(limit)
-    .skip(skip)
-    .select('-__v');
-
-    const total = await Product.countDocuments({
-      $text: { $search: q },
-      isActive: true
-    });
+    const payload = await getCatalogPayload({ req });
 
     res.json({
-      success: true,
-      query: q,
-      data: products,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
+      ...payload,
+      query: searchQuery,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleCatalogError(res, error);
   }
-}; //not tested
+};
 
 export const getFeaturedProducts = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
 
-    const products = await Product.find({ 
-      isFeatured: true, 
-      isActive: true 
+    const products = await Product.find({
+      isFeatured: true,
+      isActive: true,
     })
-    .populate('category', 'name slug')
-    .populate('subCategory', 'name slug')
-    .limit(limit)
-    .select('-__v');
+      .populate('category', 'name slug')
+      .populate('subCategory', 'name slug')
+      .limit(limit)
+      .select('-__v');
 
     res.json({
       success: true,
-      data: products
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-}; //tested works
-
-// Get single product by slug
-export const getProductBySlug = async (req, res) => {
-  try {
-    const product = await Product.findOne({ 
-      slug: req.params.slug,
-      isActive: true 
-    })
-    .populate('category', 'name slug description')
-    .populate('subCategory', 'name slug description');
-
-    if (!product) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Product not found' 
-      });
-    }
-
-    // Get related products from same subcategory
-    const relatedProducts = await Product.find({
-      subCategory: product.subCategory._id,
-      _id: { $ne: product._id },
-      isActive: true
-    })
-    .limit(4)
-    .select('name slug price images rating');
-
-    res.json({
-      success: true,
-      data: product,
-      relatedProducts
+      data: products,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
+export const getProductBySlug = async (req, res) => {
+  try {
+    const product = await Product.findOne({
+      slug: req.params.slug,
+      isActive: true,
+    })
+      .populate('category', 'name slug description')
+      .populate('subCategory', 'name slug description');
 
-//admin routes 
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      });
+    }
+
+    const relatedProducts = await Product.find({
+      subCategory: product.subCategory._id,
+      _id: { $ne: product._id },
+      isActive: true,
+    })
+      .limit(4)
+      .select('name slug price images rating');
+
+    res.json({
+      success: true,
+      data: product,
+      relatedProducts,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const createProduct = async (req, res) => {
   try {
     const product = await Product.create(req.body);
     res.status(201).json({
       success: true,
-      data: product
+      data: product,
     });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
-}; //tested works
+};
 
 export const updateProduct = async (req, res) => {
   try {
@@ -471,37 +689,37 @@ export const updateProduct = async (req, res) => {
     );
 
     if (!product) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Product not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
       });
     }
 
     res.json({
       success: true,
-      data: product
+      data: product,
     });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
-}; //tested works
+};
 
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
 
     if (!product) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Product not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
       });
     }
 
     res.json({
       success: true,
-      message: 'Product deleted successfully'
+      message: 'Product deleted successfully',
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
-}; // tested works
+};

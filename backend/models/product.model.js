@@ -60,6 +60,13 @@ const productSchema = new mongoose.Schema({
 productSchema.index({ category: 1, isActive: 1 });
 productSchema.index({ subCategory: 1, isActive: 1 });
 productSchema.index({ category: 1, subCategory: 1, isActive: 1 });
+productSchema.index({ isActive: 1, category: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, subCategory: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, category: 1, subCategory: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, category: 1, numReviews: -1, rating: -1, createdAt: -1 });
+productSchema.index({ isActive: 1, subCategory: 1, numReviews: -1, rating: -1, createdAt: -1 });
+productSchema.index({ isActive: 1, category: 1, isFeatured: -1, createdAt: -1 });
+productSchema.index({ isActive: 1, subCategory: 1, isFeatured: -1, createdAt: -1 });
 
 productSchema.index({ 'materialVariants.material': 1 });
 productSchema.index({ price: 1 });

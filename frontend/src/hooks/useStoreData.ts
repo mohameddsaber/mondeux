@@ -33,10 +33,59 @@ type ProductListResponse = {
     total: number;
     pages: number;
   };
-  category?: unknown;
-  subCategory?: unknown;
-  subCategories?: unknown[];
+  query?: string;
+  category?: {
+    name: string;
+    slug: string;
+    description?: string;
+  };
+  subCategory?: {
+    name: string;
+    slug: string;
+    description?: string;
+  };
+  filters?: {
+    q?: string;
+    sort?: string;
+    category?: string;
+    subCategory?: string;
+    materials?: string[];
+    availability?: string[];
+    minPrice?: number | null;
+    maxPrice?: number | null;
+  };
+  facets?: {
+    categories: CatalogFacetOption[];
+    subCategories: CatalogFacetOption[];
+    materials: CatalogFacetOption[];
+    availability: CatalogFacetOption[];
+    priceRange: {
+      min: number;
+      max: number;
+    };
+  };
 };
+
+export interface CatalogFacetOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface CatalogQueryInput {
+  sortBy?: string;
+  searchQuery?: string;
+  categorySlug?: string;
+  subCategorySlug?: string;
+  selectedCategory?: string;
+  selectedSubCategory?: string;
+  selectedMaterials?: string[];
+  selectedAvailability?: string[];
+  minPrice?: number | string | null;
+  maxPrice?: number | string | null;
+  limit?: number;
+  page?: number;
+}
 
 export interface ProductDetails {
   _id: string;
@@ -334,43 +383,84 @@ interface ServerCartResponse {
   };
 }
 
-const getSortQueryValue = (sortBy: string) => {
-  if (sortBy === "best-selling") {
-    return "popular";
+const normalizeCatalogSort = (sortBy = "", searchQuery = "") => {
+  if (sortBy) {
+    return sortBy === "best-selling" ? "popular" : sortBy;
   }
 
-  if (sortBy === "featured") {
-    return "featured";
-  }
-
-  return sortBy;
+  return searchQuery.trim() ? "relevance" : "newest";
 };
 
-const getProductsPath = (sortBy: string, limit = 20, searchQuery = "") => {
-  if (searchQuery.trim()) {
-    const params = new URLSearchParams({
-      q: searchQuery.trim(),
-      limit: String(limit),
-    });
-    return `/products/search?${params.toString()}`;
-  }
-
-  if (sortBy === "featured") {
-    return `/products/featured?limit=${limit}`;
-  }
-
-  const sort = getSortQueryValue(sortBy);
-  return `/products?limit=${limit}&sort=${encodeURIComponent(sort)}`;
-};
-
-const getScopedProductsPath = (
-  basePath: string,
-  sortBy: string,
-  limit = 20
+const appendCatalogParam = (
+  params: URLSearchParams,
+  key: string,
+  value: string | number | null | undefined
 ) => {
-  const params = new URLSearchParams({ limit: String(limit) });
-  params.set("sort", getSortQueryValue(sortBy));
-  return `${basePath}?${params.toString()}`;
+  if (value === undefined || value === null || value === "") {
+    return;
+  }
+
+  params.set(key, String(value));
+};
+
+const buildCatalogPath = ({
+  sortBy = "",
+  searchQuery = "",
+  categorySlug = "",
+  subCategorySlug = "",
+  selectedCategory = "",
+  selectedSubCategory = "",
+  selectedMaterials = [],
+  selectedAvailability = [],
+  minPrice = null,
+  maxPrice = null,
+  limit = 20,
+  page = 1,
+}: CatalogQueryInput) => {
+  let basePath = "/products";
+
+  if (subCategorySlug) {
+    basePath = `/products/subcategory/${subCategorySlug}`;
+  } else if (categorySlug) {
+    basePath = `/products/category/${categorySlug}`;
+  }
+
+  const normalizedSearchQuery = searchQuery.trim();
+  const params = new URLSearchParams();
+
+  appendCatalogParam(params, "limit", limit);
+  appendCatalogParam(params, "page", page);
+  appendCatalogParam(
+    params,
+    "sort",
+    normalizeCatalogSort(sortBy, normalizedSearchQuery)
+  );
+  appendCatalogParam(params, "q", normalizedSearchQuery);
+  appendCatalogParam(
+    params,
+    "category",
+    categorySlug ? "" : selectedCategory
+  );
+  appendCatalogParam(
+    params,
+    "subCategory",
+    subCategorySlug ? "" : selectedSubCategory
+  );
+  appendCatalogParam(
+    params,
+    "material",
+    selectedMaterials.length > 0 ? selectedMaterials.join(",") : ""
+  );
+  appendCatalogParam(
+    params,
+    "availability",
+    selectedAvailability.length > 0 ? selectedAvailability.join(",") : ""
+  );
+  appendCatalogParam(params, "minPrice", minPrice);
+  appendCatalogParam(params, "maxPrice", maxPrice);
+
+  const queryString = params.toString();
+  return queryString ? `${basePath}?${queryString}` : basePath;
 };
 
 const mapServerCartToClientCart = (
@@ -599,54 +689,50 @@ export const useRemoveFromCartMutation = () => {
   });
 };
 
-export const useProductsQuery = (sortBy: string, searchQuery = "") =>
+export const useCatalogProductsQuery = (input: CatalogQueryInput) =>
   useQuery({
-    queryKey: queryKeys.products.list("all", { sortBy, searchQuery }),
-    queryFn: () =>
-      apiRequest<ProductListResponse>(getProductsPath(sortBy, 20, searchQuery)),
+    queryKey: queryKeys.products.list("catalog", {
+      ...input,
+    }),
+    queryFn: () => apiRequest<ProductListResponse>(buildCatalogPath(input)),
     placeholderData: keepPreviousData,
+  });
+
+export const useProductsQuery = (
+  sortBy: string,
+  searchQuery = "",
+  limit = 20
+) =>
+  useCatalogProductsQuery({
+    sortBy,
+    searchQuery,
+    limit,
   });
 
 export const useCategoryProductsQuery = (
   categorySlug: string,
   sortBy: string,
-  limit = 20
+  limit = 20,
+  options: Omit<CatalogQueryInput, "sortBy" | "categorySlug" | "limit"> = {}
 ) =>
-  useQuery({
-    queryKey: queryKeys.products.list("category", { categorySlug, sortBy, limit }),
-    queryFn: () =>
-      apiRequest<ProductListResponse>(
-        getScopedProductsPath(
-          `/products/category/${categorySlug}`,
-          sortBy,
-          limit
-        )
-      ),
-    enabled: Boolean(categorySlug),
-    placeholderData: keepPreviousData,
+  useCatalogProductsQuery({
+    ...options,
+    categorySlug,
+    sortBy,
+    limit,
   });
 
 export const useSubCategoryProductsQuery = (
   subCategorySlug: string,
   sortBy: string,
-  limit = 20
+  limit = 20,
+  options: Omit<CatalogQueryInput, "sortBy" | "subCategorySlug" | "limit"> = {}
 ) =>
-  useQuery({
-    queryKey: queryKeys.products.list("subcategory", {
-      subCategorySlug,
-      sortBy,
-      limit,
-    }),
-    queryFn: () =>
-      apiRequest<ProductListResponse>(
-        getScopedProductsPath(
-          `/products/subcategory/${subCategorySlug}`,
-          sortBy,
-          limit
-        )
-      ),
-    enabled: Boolean(subCategorySlug),
-    placeholderData: keepPreviousData,
+  useCatalogProductsQuery({
+    ...options,
+    subCategorySlug,
+    sortBy,
+    limit,
   });
 
 export const useProductDetailQuery = (slug: string) =>

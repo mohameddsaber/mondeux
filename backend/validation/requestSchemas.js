@@ -26,6 +26,15 @@ const analyticsEventTypeEnum = z.enum([
   'signup_success',
   'signup_failure',
 ]);
+const catalogSortEnum = z.enum([
+  'featured',
+  'price_asc',
+  'price_desc',
+  'newest',
+  'popular',
+  'best-selling',
+  'relevance',
+]);
 
 const sizeVariantSchema = z.object({
   label: z.string().trim().min(1, 'Size label is required'),
@@ -221,6 +230,54 @@ export const updateProductSchema = z.object({
     id: objectIdSchema,
   }),
   query: z.object({}),
+});
+
+const catalogQuerySchema = z.object({
+  q: optionalTrimmedString,
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  sort: catalogSortEnum.optional(),
+  material: optionalTrimmedString,
+  availability: optionalTrimmedString,
+  minPrice: z.coerce.number().min(0).optional(),
+  maxPrice: z.coerce.number().min(0).optional(),
+  category: optionalTrimmedString,
+  subCategory: optionalTrimmedString,
+}).passthrough();
+
+const slugParamSchema = z.object({
+  slug: z.string().trim().min(1),
+});
+
+export const productListQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({}).passthrough(),
+  query: catalogQuerySchema,
+});
+
+export const categoryProductsQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({
+    categorySlug: slugParamSchema.shape.slug,
+  }),
+  query: catalogQuerySchema,
+});
+
+export const subCategoryProductsQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({
+    subCategorySlug: slugParamSchema.shape.slug,
+  }),
+  query: catalogQuerySchema,
+});
+
+export const categoryAndSubCategoryProductsQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({
+    categorySlug: slugParamSchema.shape.slug,
+    subCategorySlug: slugParamSchema.shape.slug,
+  }),
+  query: catalogQuerySchema,
 });
 
 export const ingestEventSchema = z.object({
