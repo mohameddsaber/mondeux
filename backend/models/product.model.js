@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { applyDerivedProductFields, computeProductDerivedFields } from '../utils/productDerivedFields.js';
 
 const productSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
@@ -49,6 +50,9 @@ const productSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   isFeatured: { type: Boolean, default: false },
   lowStockThreshold: { type: Number, default: 5 },
+  minVariantPrice: { type: Number, default: 0, min: 0, index: true },
+  totalStock: { type: Number, default: 0, min: 0, index: true },
+  availableMaterials: [{ type: String, enum: ['gold', 'silver', 'stainless steel'] }],
 
   metaTitle: String,
   metaDescription: String,
@@ -63,15 +67,55 @@ productSchema.index({ category: 1, subCategory: 1, isActive: 1 });
 productSchema.index({ isActive: 1, category: 1, createdAt: -1 });
 productSchema.index({ isActive: 1, subCategory: 1, createdAt: -1 });
 productSchema.index({ isActive: 1, category: 1, subCategory: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, category: 1, minVariantPrice: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, category: 1, minVariantPrice: -1, createdAt: -1 });
+productSchema.index({ isActive: 1, subCategory: 1, minVariantPrice: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, subCategory: 1, minVariantPrice: -1, createdAt: -1 });
+productSchema.index({ isActive: 1, category: 1, totalStock: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, subCategory: 1, totalStock: 1, createdAt: -1 });
 productSchema.index({ isActive: 1, category: 1, numReviews: -1, rating: -1, createdAt: -1 });
 productSchema.index({ isActive: 1, subCategory: 1, numReviews: -1, rating: -1, createdAt: -1 });
 productSchema.index({ isActive: 1, category: 1, isFeatured: -1, createdAt: -1 });
 productSchema.index({ isActive: 1, subCategory: 1, isFeatured: -1, createdAt: -1 });
 
 productSchema.index({ 'materialVariants.material': 1 });
-productSchema.index({ price: 1 });
+productSchema.index({ availableMaterials: 1, isActive: 1 });
 productSchema.index({ isFeatured: 1, isActive: 1 });
 productSchema.index({ name: 'text', description: 'text', tags: 'text' });
+
+productSchema.pre('save', function(next) {
+  applyDerivedProductFields(this, this.materialVariants);
+  next();
+});
+
+productSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate() || {};
+  const materialVariants =
+    update.materialVariants
+    || update.$set?.materialVariants
+    || null;
+
+  if (!materialVariants) {
+    return next();
+  }
+
+  const derivedFields = computeProductDerivedFields(materialVariants);
+  const nextUpdate = { ...update };
+  nextUpdate.$set = {
+    ...(update.$set || {}),
+    minVariantPrice: derivedFields.minVariantPrice,
+    totalStock: derivedFields.totalStock,
+    availableMaterials: derivedFields.availableMaterials,
+  };
+
+  if ('materialVariants' in nextUpdate) {
+    delete nextUpdate.materialVariants;
+    nextUpdate.$set.materialVariants = materialVariants;
+  }
+
+  this.setUpdate(nextUpdate);
+  next();
+});
 
 const Product = mongoose.model('Product', productSchema);
 export default Product;

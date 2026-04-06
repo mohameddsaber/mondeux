@@ -152,45 +152,16 @@ const resolveSubCategoryContext = async (subCategorySlug, categoryId = null) => 
   return subCategory;
 };
 
-const getCatalogComputedFieldsStage = (hasSearchQuery) => {
-  const stage = {
-    minVariantPrice: {
-      $min: {
-        $map: {
-          input: { $ifNull: ['$materialVariants', []] },
-          as: 'variant',
-          in: '$$variant.price',
-        },
-      },
-    },
-    totalStock: {
-      $sum: {
-        $map: {
-          input: { $ifNull: ['$materialVariants', []] },
-          as: 'variant',
-          in: { $ifNull: ['$$variant.stock', 0] },
-        },
-      },
-    },
-  };
-
-  if (hasSearchQuery) {
-    stage.searchScore = { $meta: 'textScore' };
-  }
-
-  return { $addFields: stage };
-};
-
 const createFacetPipeline = ({
   includeCategories = true,
   includeSubCategories = true,
 }) => {
   const facets = {
     materials: [
-      { $unwind: '$materialVariants' },
+      { $unwind: '$availableMaterials' },
       {
         $group: {
-          _id: '$materialVariants.material',
+          _id: '$availableMaterials',
           count: { $sum: 1 },
         },
       },
@@ -423,8 +394,15 @@ const getCatalogPayload = async ({
 
   const catalogPipeline = [
     { $match: baseMatch },
-    getCatalogComputedFieldsStage(Boolean(q)),
   ];
+
+  if (q) {
+    catalogPipeline.push({
+      $addFields: {
+        searchScore: { $meta: 'textScore' },
+      },
+    });
+  }
 
   if (minPrice !== null || maxPrice !== null) {
     const priceMatch = {};
