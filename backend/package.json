@@ -5,8 +5,9 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node server.js"
+    "test": "node --test",
+    "dev": "node server.js",
+    "resync:data": "node scripts/resync-store-data.js"
   },
   "keywords": [],
   "author": "",

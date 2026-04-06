@@ -1,26 +1,37 @@
 import Cart from '../models/cart.model.js';
 import Product from '../models/product.model.js';
 
-const populateAndSaveCart = async (cart, res) => {
-
+const prepareCart = async (cart) => {
   await cart.populate({
     path: 'items.product',
     select: 'name slug price images stock isActive'
   });
 
-  cart.items = cart.items.filter(item => 
+  const activeItems = cart.items.filter(item =>
     item.product && item.product.isActive && item.quantity > 0
   );
 
-  cart.totalAmount = cart.items.reduce((total, item) => {
+  const totalAmount = activeItems.reduce((total, item) => {
     const price = Number(item.price) || 0;
     const quantity = Number(item.quantity) || 0;
     return total + (price * quantity);
   }, 0);
 
-  cart.markModified('items');
-  
-  await cart.save();
+  const itemsChanged = activeItems.length !== cart.items.length;
+  const totalChanged = cart.totalAmount !== totalAmount;
+
+  if (itemsChanged) {
+    cart.items = activeItems;
+  }
+
+  if (totalChanged) {
+    cart.totalAmount = totalAmount;
+  }
+
+  return itemsChanged || totalChanged;
+};
+
+const sendCartResponse = (cart, res) => {
 
   res.json({
     success: true,
@@ -37,7 +48,13 @@ export const getCart = async (req, res) => {
       cart = await Cart.create({ user: req.user._id, items: [] });
     }
 
-    await populateAndSaveCart(cart, res);
+    const shouldPersist = await prepareCart(cart);
+
+    if (shouldPersist) {
+      await cart.save();
+    }
+
+    sendCartResponse(cart, res);
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -79,7 +96,9 @@ export const addToCart = async (req, res) => {
         material
       });
     }
-    await populateAndSaveCart(cart, res);
+    await prepareCart(cart);
+    await cart.save();
+    sendCartResponse(cart, res);
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -146,7 +165,9 @@ export const updateCartItem = async (req, res) => {
         }
     }
 
-    await populateAndSaveCart(cart, res);
+    await prepareCart(cart);
+    await cart.save();
+    sendCartResponse(cart, res);
 
   } catch (error) {
     console.error('Error in updateCartItem:', error);
@@ -174,7 +195,9 @@ export const removeFromCart = async (req, res) => {
         )
     );
 
-    await populateAndSaveCart(cart, res);
+    await prepareCart(cart);
+    await cart.save();
+    sendCartResponse(cart, res);
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -192,7 +215,9 @@ export const clearCart = async (req, res) => {
     }
 
     cart.items = [];
-    await populateAndSaveCart(cart, res);
+    await prepareCart(cart);
+    await cart.save();
+    sendCartResponse(cart, res);
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

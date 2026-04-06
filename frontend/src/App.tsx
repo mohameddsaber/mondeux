@@ -36,11 +36,17 @@ const SubCategoryPageWrapper = () => {
     return <SubCategoryPage subCategorySlug={subCategorySlug} />;
 }
 function App() {
+  const navigate = useNavigate();
   const [isLoyaltyOpen, setIsLoyaltyOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
+  
   useEffect(() => {
-    const checkAuth = async () => {
+    let isMounted = true;
+
+    const checkSession = async () => {
       try {
         const res = await fetch("http://localhost:4000/api/users/me", {
           method: "GET",
@@ -48,52 +54,46 @@ function App() {
         });
 
         const data = await res.json();
-        if (res.ok && data.success) {
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (res.ok && data.success && data.user) {
+          const userIsAdmin = data.user.role === "admin";
+
           setIsAuthenticated(true);
+          setIsAdmin(userIsAdmin);
+
+          if (userIsAdmin && (window.location.pathname === "/" || window.location.pathname === "/auth")) {
+            navigate("/admin/dashboard", { replace: true });
+          }
         } else {
           setIsAuthenticated(false);
-        }
-      } catch (err) {
-        setIsAuthenticated(false);
-        console.log(err);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    const checkAdmin = async () => {
-      try {
-        const res = await fetch("http://localhost:4000/api/users/admin", {
-          method: "GET",
-          credentials: "include",
-        });
-
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setIsAdmin(true);
-          if (location.pathname === "/"||location.pathname === "/auth") {
-            navigate("/admin/dashboard");
-          }        
-        
-        } else {
           setIsAdmin(false);
         }
       } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+
+        setIsAuthenticated(false);
         setIsAdmin(false);
         console.log(err);
       } finally {
-        setIsCheckingAdmin(false);
+        if (isMounted) {
+          setIsCheckingAdmin(false);
+        }
       }
     };
 
-    checkAdmin();
-  }, []);
+    setIsCheckingAdmin(true);
+    checkSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
       
 
   return (
@@ -124,7 +124,7 @@ function App() {
           <Routes>
             {/* User-facing routes */}
             <Route path="/" element={<HomePage />} />
-            <Route path="/auth" element={<AuthPage isAdmin={isAdmin} />} />
+            <Route path="/auth" element={<AuthPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />

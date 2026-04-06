@@ -1,9 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
-import {fetchCart} from '../utils/cartManager';
+import { fetchCart } from "../utils/cartManager";
 
-export default function AuthPage( isAdmin: boolean ) {
+interface LoginFormProps {
+  onToggle: () => void;
+}
+
+interface SignupFormProps {
+  onToggle: () => void;
+}
+
+export default function AuthPage() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const mode = params.get("mode");
@@ -18,7 +26,7 @@ export default function AuthPage( isAdmin: boolean ) {
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {isLogin ? (
-          <LoginForm isAdmin={isAdmin} onToggle={() => setIsLogin(false)} />
+          <LoginForm onToggle={() => setIsLogin(false)} />
         ) : (
           <SignupForm onToggle={() => setIsLogin(true)} />
         )}
@@ -29,7 +37,7 @@ export default function AuthPage( isAdmin: boolean ) {
 
 
 // Login Component
-function LoginForm({ onToggle, isAdmin }) {
+function LoginForm({ onToggle }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -38,7 +46,7 @@ function LoginForm({ onToggle, isAdmin }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -56,26 +64,16 @@ function LoginForm({ onToggle, isAdmin }) {
       const data = await response.json();
 
       if (data.success) {
-        // Store token in localStorage
-        localStorage.setItem('token', data.data.token);
-        localStorage.setItem('user', JSON.stringify(data.data));
-            try {
-            await fetchCart(); 
-            } catch (e) {
-            console.error("Failed to load cart after login:", e);
-            }
-        
-        
-       if (isAdmin) {
-          window.location.href = '/admin/dashboard';
-        } else {
-          window.location.href = '/';
-        }
+        fetchCart().catch((cartError) => {
+          console.error("Failed to load cart after login:", cartError);
+        });
+
+        window.location.assign(data.data.role === 'admin' ? '/admin/dashboard' : '/');
 
       } else {
         setError(data.message || 'Login failed');
       }
-    } catch (err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -183,7 +181,7 @@ function LoginForm({ onToggle, isAdmin }) {
 }
 
 // Signup Component
-function SignupForm({ onToggle }) {
+function SignupForm({ onToggle }: SignupFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -195,7 +193,7 @@ function SignupForm({ onToggle }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
@@ -218,6 +216,7 @@ function SignupForm({ onToggle }) {
         headers: {
           'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
@@ -229,16 +228,11 @@ function SignupForm({ onToggle }) {
       const data = await response.json();
 
       if (data.success) {
-        // Store token
-        localStorage.setItem('token', data.data.token);
-        localStorage.setItem('user', JSON.stringify(data.data));
-        
-        alert('Account created successfully!');
-        // Redirect or update app state here
+        window.location.assign('/');
       } else {
         setError(data.message || 'Registration failed');
       }
-    } catch (err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
