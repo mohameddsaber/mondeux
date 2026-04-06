@@ -204,6 +204,12 @@ export interface SubCategoryRecord {
 type CollectionResponse<T> = {
   success: boolean;
   data: T[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 };
 
 type SalesSummary = {
@@ -214,6 +220,88 @@ type SalesSummary = {
 type SalesByDate = {
   _id: string;
   totalRevenue: number;
+};
+
+export interface FunnelStage {
+  key: string;
+  label: string;
+  actors: number;
+  conversionFromPrevious: number | null;
+  conversionFromFirst: number | null;
+}
+
+type AnalyticsFunnelResponse = {
+  success: boolean;
+  data: {
+    days: number;
+    startDate: string;
+    stages: FunnelStage[];
+    overallConversionRate: number;
+  };
+};
+
+export interface TopProductAnalytics {
+  productId: string;
+  name: string;
+  slug: string;
+  image: string;
+  views: number;
+  uniqueViewers: number;
+  addToCarts: number;
+  addToCartActors: number;
+  unitsSold: number;
+  orders: number;
+  revenue: number;
+  viewToCartRate: number;
+  viewToPurchaseRate: number;
+}
+
+type AnalyticsTopProductsResponse = {
+  success: boolean;
+  data: {
+    days: number;
+    items: TopProductAnalytics[];
+  };
+};
+
+export interface RepeatCustomerAnalytics {
+  userId: string;
+  name: string;
+  email: string;
+  orderCount: number;
+  totalSpent: number;
+  averageOrderValue: number;
+  lastOrderAt: string;
+}
+
+type AnalyticsRepeatCustomersResponse = {
+  success: boolean;
+  data: {
+    days: number;
+    items: RepeatCustomerAnalytics[];
+  };
+};
+
+export interface LowConversionPageAnalytics {
+  productId: string;
+  name: string;
+  slug: string;
+  pagePath: string;
+  views: number;
+  uniqueVisitors: number;
+  addToCartActors: number;
+  addToCartEvents: number;
+  purchasedUnits: number;
+  conversionRate: number;
+}
+
+type AnalyticsLowConversionPagesResponse = {
+  success: boolean;
+  data: {
+    days: number;
+    minVisitors: number;
+    items: LowConversionPageAnalytics[];
+  };
 };
 
 export interface CartItem {
@@ -791,6 +879,12 @@ export const useDeleteSubCategoryMutation = () => {
 };
 
 export const useAdminDashboardQueries = () => {
+  const analyticsDays = 30;
+  const topProductsLimit = 5;
+  const repeatCustomersLimit = 5;
+  const lowConversionLimit = 5;
+  const minVisitors = 10;
+
   const results = useQueries({
     queries: [
       {
@@ -819,6 +913,44 @@ export const useAdminDashboardQueries = () => {
         queryFn: () =>
           apiRequest<CollectionResponse<CategoryRecord>>("/categories"),
       },
+      {
+        queryKey: queryKeys.admin.analytics.funnel(analyticsDays),
+        queryFn: () =>
+          apiRequest<AnalyticsFunnelResponse>(
+            `/analytics/funnel?days=${analyticsDays}`
+          ),
+      },
+      {
+        queryKey: queryKeys.admin.analytics.topProducts(
+          analyticsDays,
+          topProductsLimit
+        ),
+        queryFn: () =>
+          apiRequest<AnalyticsTopProductsResponse>(
+            `/analytics/top-products?days=${analyticsDays}&limit=${topProductsLimit}`
+          ),
+      },
+      {
+        queryKey: queryKeys.admin.analytics.repeatCustomers(
+          analyticsDays,
+          repeatCustomersLimit
+        ),
+        queryFn: () =>
+          apiRequest<AnalyticsRepeatCustomersResponse>(
+            `/analytics/repeat-customers?days=${analyticsDays}&limit=${repeatCustomersLimit}`
+          ),
+      },
+      {
+        queryKey: queryKeys.admin.analytics.lowConversionPages(
+          analyticsDays,
+          lowConversionLimit,
+          minVisitors
+        ),
+        queryFn: () =>
+          apiRequest<AnalyticsLowConversionPagesResponse>(
+            `/analytics/low-conversion-pages?days=${analyticsDays}&limit=${lowConversionLimit}&minVisitors=${minVisitors}`
+          ),
+      },
     ],
   });
 
@@ -829,5 +961,9 @@ export const useAdminDashboardQueries = () => {
     usersQuery: results[3],
     productsQuery: results[4],
     categoriesQuery: results[5],
+    funnelQuery: results[6],
+    topProductsQuery: results[7],
+    repeatCustomersQuery: results[8],
+    lowConversionPagesQuery: results[9],
   };
 };

@@ -22,5 +22,19 @@ export const queryKeys = {
     subCategories: ["admin", "subCategories"] as const,
     salesSummary: ["admin", "sales", "summary"] as const,
     salesByDate: ["admin", "sales", "byDate"] as const,
+    analytics: {
+      funnel: (days: number) => ["admin", "analytics", "funnel", days] as const,
+      topProducts: (days: number, limit: number) =>
+        ["admin", "analytics", "topProducts", { days, limit }] as const,
+      repeatCustomers: (days: number, limit: number) =>
+        ["admin", "analytics", "repeatCustomers", { days, limit }] as const,
+      lowConversionPages: (days: number, limit: number, minVisitors: number) =>
+        [
+          "admin",
+          "analytics",
+          "lowConversionPages",
+          { days, limit, minVisitors },
+        ] as const,
+    },
   },
 } as const;

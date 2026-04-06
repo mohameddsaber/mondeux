@@ -16,6 +16,7 @@ import orderRoutes from './routes/order.routes.js';
 import userRoutes from './routes/user.routes.js';
 import salesRoutes from './routes/sales.routes.js';
 import eventRoutes from './routes/event.routes.js';
+import analyticsRoutes from './routes/analytics.routes.js';
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
@@ -74,7 +76,6 @@ app.listen(appConfig.port, appConfig.host, () => {
 
 
 export default app;
-
 
 
 

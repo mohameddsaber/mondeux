@@ -22,12 +22,19 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { DollarSign, Users, Package, Clock,FolderTree } from 'lucide-react';
+import {
+  DollarSign,
+  Users,
+  Package,
+  Clock,
+  FolderTree,
+  ShoppingCart,
+} from 'lucide-react';
 import { useAdminDashboardQueries } from '@/hooks/useStoreData';
 
 interface Order {
   _id: string;
-  user: { name: string; email: string };
+  user: { name: string; email: string } | string;
   totalAmount: number;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: string;
@@ -38,6 +45,9 @@ const formatCurrency = (amount: number) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+
+const formatPercent = (value: number | null | undefined) =>
+  `${Number(value || 0).toFixed(1)}%`;
 
 const getStatusBadge = (status: Order['status']) => {
   switch (status) {
@@ -66,15 +76,30 @@ const getStatusBadge = (status: Order['status']) => {
   }
 };
 
+const getOrderUser = (user: Order['user']) => {
+  if (typeof user === 'string' || !user) {
+    return {
+      name: 'Unknown user',
+      email: '',
+    };
+  }
+
+  return user;
+};
+
 export default function AdminDashboardPage() {
-const {
-  summaryQuery,
-  salesByDateQuery,
-  ordersQuery,
-  usersQuery,
-  productsQuery,
-  categoriesQuery,
-} = useAdminDashboardQueries();
+  const {
+    summaryQuery,
+    salesByDateQuery,
+    ordersQuery,
+    usersQuery,
+    productsQuery,
+    categoriesQuery,
+    funnelQuery,
+    topProductsQuery,
+    repeatCustomersQuery,
+    lowConversionPagesQuery,
+  } = useAdminDashboardQueries();
 
   const loading = [
     summaryQuery,
@@ -83,23 +108,39 @@ const {
     usersQuery,
     productsQuery,
     categoriesQuery,
+    funnelQuery,
+    topProductsQuery,
+    repeatCustomersQuery,
+    lowConversionPagesQuery,
   ].some((query) => query.isPending);
+
   const summary = summaryQuery.data || { totalRevenue: 0, totalUnitsSold: 0 };
   const salesData = salesByDateQuery.data || [];
   const recentOrders = (ordersQuery.data?.data as Order[]) || [];
-  const totalUsers = usersQuery.data?.data?.length || 0;
-  const totalProducts = productsQuery.data?.data?.length || 0;
+  const totalUsers = usersQuery.data?.pagination?.total || usersQuery.data?.data?.length || 0;
+  const totalProducts =
+    productsQuery.data?.pagination?.total || productsQuery.data?.data?.length || 0;
   const totalCategories = categoriesQuery.data?.data?.length || 0;
+  const funnel = funnelQuery.data?.data;
+  const funnelStages = funnel?.stages || [];
+  const topProducts = topProductsQuery.data?.data.items || [];
+  const repeatCustomers = repeatCustomersQuery.data?.data.items || [];
+  const lowConversionPages = lowConversionPagesQuery.data?.data.items || [];
 
   const totalRevenue = summary?.totalRevenue || 0;
   const totalUnitsSold = summary?.totalUnitsSold || 0;
-  const growthRate = 0.15;
-  const chartData = salesData.map((d) => ({
-    date: new Date(d._id).toLocaleDateString('en-US', {
+  const funnelWindow = funnel?.days || 30;
+  const overallConversionRate = funnel?.overallConversionRate || 0;
+  const productViews =
+    funnelStages.find((stage) => stage.key === 'product_view')?.actors || 0;
+  const addToCartActors =
+    funnelStages.find((stage) => stage.key === 'add_to_cart')?.actors || 0;
+  const chartData = salesData.map((entry) => ({
+    date: new Date(entry._id).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
     }),
-    Revenue: d.totalRevenue,
+    Revenue: entry.totalRevenue,
   }));
 
   if (loading) {
@@ -112,64 +153,47 @@ const {
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-gray-100 ">
+    <div className="flex min-h-screen w-full flex-col bg-gray-100">
       <main className="flex flex-1 flex-col gap-8 p-3 md:p-10">
-        {/* Header */}
         <header>
           <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
             Dashboard Overview
           </h1>
-          <p className="text-gray-500 mt-1">
-            A summary of store performance, users, and recent orders.
+          <p className="mt-1 text-gray-500">
+            Revenue, activity, and conversion signals for the last {funnelWindow}{' '}
+            days.
           </p>
         </header>
 
-        {/* Key Metrics */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {[
             {
               title: 'Total Revenue',
               value: formatCurrency(totalRevenue),
               icon: <DollarSign className="h-5 w-5 text-gray-500" />,
-              footer: (
-                <p className="text-xs text-green-600">
-                  +{(growthRate * 100).toFixed(0)}% from last month
-                </p>
-              ),
+              footer: 'All tracked sales revenue',
             },
             {
               title: 'Units Sold',
               value: totalUnitsSold.toLocaleString(),
               icon: <Package className="h-5 w-5 text-gray-500" />,
-              footer: (
-                <p className="text-xs text-muted-foreground">
-                  Total products sold
-                </p>
-              ),
+              footer: 'Units sold across all orders',
             },
             {
-              title: 'Total Users',
-              value: totalUsers.toLocaleString(),
+              title: 'Product Views',
+              value: productViews.toLocaleString(),
               icon: <Users className="h-5 w-5 text-gray-500" />,
-              footer: (
-                <p className="text-xs text-muted-foreground">
-                  Registered customers
-                </p>
-              ),
+              footer: `${addToCartActors.toLocaleString()} visitors added items to cart`,
             },
             {
-              title: 'New Orders',
-              value: '12',
-              icon: <Clock className="h-5 w-5 text-gray-500" />,
-              footer: (
-                <p className="text-xs text-muted-foreground">
-                  In the last 24 hours
-                </p>
-              ),
+              title: 'Checkout Conversion',
+              value: formatPercent(overallConversionRate),
+              icon: <ShoppingCart className="h-5 w-5 text-gray-500" />,
+              footer: `View to completed checkout in ${funnelWindow} days`,
             },
-          ].map((metric, i) => (
+          ].map((metric) => (
             <Card
-              key={i}
+              key={metric.title}
               className="shadow-sm hover:shadow-md transition-shadow border-gray-200"
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -180,16 +204,15 @@ const {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-semibold">{metric.value}</div>
-                <div className="pt-1">{metric.footer}</div>
+                <p className="pt-1 text-xs text-muted-foreground">
+                  {metric.footer}
+                </p>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Chart + Recent Orders */}
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
-          
-          {/* Sales Over Time Chart */}
           <Card className="col-span-1 md:col-span-2 lg:col-span-4 shadow-sm border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-gray-700">
@@ -212,12 +235,14 @@ const {
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
-                    // Use a smaller formatter for better mobile display, or reduce the number of ticks
-                    tickFormatter={(v) => `LE ${v / 1000}k`} 
+                    tickFormatter={(value) => `LE ${value / 1000}k`}
                   />
                   <Tooltip
-                    formatter={(v) => [formatCurrency(Number(v)), 'Revenue']}
-                    labelFormatter={(l) => `Date: ${l}`}
+                    formatter={(value) => [
+                      formatCurrency(Number(value)),
+                      'Revenue',
+                    ]}
+                    labelFormatter={(label) => `Date: ${label}`}
                   />
                   <Line
                     type="monotone"
@@ -232,7 +257,6 @@ const {
             </CardContent>
           </Card>
 
-          {/* Recent Orders Table */}
           <Card className="col-span-1 md:col-span-2 lg:col-span-3 shadow-sm border-gray-200">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-gray-700">
@@ -244,31 +268,131 @@ const {
                 <Table className="min-w-full">
                   <TableHeader>
                     <TableRow>
-                      {/* Optional: Add a small screen class to TableHead to reduce padding/size */}
-                      <TableHead className="min-w-[120px]">Customer</TableHead> 
+                      <TableHead className="min-w-[120px]">Customer</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead className="text-right">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentOrders.map((order) => (
-                      <TableRow key={order._id}>
-                        <TableCell>
-                          {/* CRITICAL FIXES: Added max-w-xs and truncate to manage long text */}
-                          <div className="max-w-[120px] sm:max-w-[150px]"> 
-                              <div className="font-medium text-gray-800 truncate"> 
-                                {order.user.name}
+                    {recentOrders.map((order) => {
+                      const user = getOrderUser(order.user);
+
+                      return (
+                        <TableRow key={order._id}>
+                          <TableCell>
+                            <div className="max-w-[120px] sm:max-w-[150px]">
+                              <div className="font-medium text-gray-800 truncate">
+                                {user.name}
                               </div>
                               <div className="text-sm text-gray-500 truncate">
-                                {order.user.email}
+                                {user.email}
                               </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-semibold text-gray-700">
+                            {formatCurrency(order.totalAmount)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {getStatusBadge(order.status)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-5">
+          <Card className="lg:col-span-2 shadow-sm border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-gray-700">
+                Funnel
+              </CardTitle>
+              <p className="text-sm text-gray-500">
+                Distinct visitors from product view to completed checkout.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {funnelStages.map((stage, index) => {
+                const baseActors = funnelStages[0]?.actors || 0;
+                const width = baseActors
+                  ? Math.max((stage.actors / baseActors) * 100, 8)
+                  : 0;
+
+                return (
+                  <div key={stage.key} className="space-y-2">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-medium text-gray-900">{stage.label}</p>
+                        <p className="text-xs text-gray-500">
+                          {stage.actors.toLocaleString()} visitors
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {formatPercent(stage.conversionFromFirst)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {index === 0
+                            ? 'Entry point'
+                            : `${formatPercent(stage.conversionFromPrevious)} from previous`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gray-900"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-3 shadow-sm border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-gray-700">
+                Top Products
+              </CardTitle>
+              <p className="text-sm text-gray-500">
+                Ranked by revenue, with view and cart context.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Revenue</TableHead>
+                      <TableHead>Units</TableHead>
+                      <TableHead>Views</TableHead>
+                      <TableHead className="text-right">View → Cart</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {topProducts.map((product) => (
+                      <TableRow key={product.productId}>
+                        <TableCell>
+                          <div className="max-w-[220px]">
+                            <div className="font-medium text-gray-800 truncate">
+                              {product.name}
+                            </div>
+                            <div className="text-sm text-gray-500 truncate">
+                              /product/{product.slug || product.productId}
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell className="font-semibold text-gray-700">
-                          {formatCurrency(order.totalAmount)}
-                        </TableCell>
+                        <TableCell>{formatCurrency(product.revenue)}</TableCell>
+                        <TableCell>{product.unitsSold.toLocaleString()}</TableCell>
+                        <TableCell>{product.views.toLocaleString()}</TableCell>
                         <TableCell className="text-right">
-                          {getStatusBadge(order.status)}
+                          {formatPercent(product.viewToCartRate)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -279,7 +403,109 @@ const {
           </Card>
         </div>
 
-        {/* Quick Links */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="shadow-sm border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-gray-700">
+                Repeat Customers
+              </CardTitle>
+              <p className="text-sm text-gray-500">
+                Customers with more than one order in the current analytics
+                window.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Orders</TableHead>
+                      <TableHead>Total Spent</TableHead>
+                      <TableHead className="text-right">Last Order</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {repeatCustomers.map((customer) => (
+                      <TableRow key={customer.userId}>
+                        <TableCell>
+                          <div className="max-w-[220px]">
+                            <div className="font-medium text-gray-800 truncate">
+                              {customer.name}
+                            </div>
+                            <div className="text-sm text-gray-500 truncate">
+                              {customer.email}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{customer.orderCount}</TableCell>
+                        <TableCell>{formatCurrency(customer.totalSpent)}</TableCell>
+                        <TableCell className="text-right text-sm text-gray-500">
+                          {new Date(customer.lastOrderAt).toLocaleDateString(
+                            'en-US',
+                            {
+                              month: 'short',
+                              day: 'numeric',
+                            }
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-gray-700">
+                Low-Conversion Pages
+              </CardTitle>
+              <p className="text-sm text-gray-500">
+                Product pages with traffic but weak add-to-cart conversion.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Page</TableHead>
+                      <TableHead>Visitors</TableHead>
+                      <TableHead>Cart Adds</TableHead>
+                      <TableHead className="text-right">Conversion</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lowConversionPages.map((page) => (
+                      <TableRow key={page.productId}>
+                        <TableCell>
+                          <div className="max-w-[240px]">
+                            <div className="font-medium text-gray-800 truncate">
+                              {page.name}
+                            </div>
+                            <div className="text-sm text-gray-500 truncate">
+                              {page.pagePath || `/product/${page.slug || page.productId}`}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{page.uniqueVisitors.toLocaleString()}</TableCell>
+                        <TableCell>{page.addToCartActors.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-medium">
+                            {formatPercent(page.conversionRate)}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="grid gap-6 lg:grid-cols-4">
           <Card className="shadow-sm border-gray-200">
             <CardHeader>
@@ -291,10 +517,10 @@ const {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-gray-900 mb-2">
+              <p className="mb-2 text-2xl font-bold text-gray-900">
                 {totalProducts}
               </p>
-              <p className="text-sm text-gray-500 mb-3">
+              <p className="mb-3 text-sm text-gray-500">
                 Total products in store
               </p>
               <a
@@ -316,12 +542,10 @@ const {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-gray-900 mb-2">
+              <p className="mb-2 text-2xl font-bold text-gray-900">
                 {totalCategories}
               </p>
-              <p className="text-sm text-gray-500 mb-3">
-                Product categories
-              </p>
+              <p className="mb-3 text-sm text-gray-500">Product categories</p>
               <a
                 href="/admin/categories"
                 className="text-sm text-blue-600 hover:underline font-medium"
@@ -341,10 +565,10 @@ const {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-gray-900 mb-2">
+              <p className="mb-2 text-2xl font-bold text-gray-900">
                 {recentOrders.length}
               </p>
-              <p className="text-sm text-gray-500 mb-3">
+              <p className="mb-3 text-sm text-gray-500">
                 Recent orders to process
               </p>
               <a
@@ -362,14 +586,14 @@ const {
                 <CardTitle className="text-lg font-semibold text-gray-700">
                   Manage Users
                 </CardTitle>
-                <Users className="h-5 w-5 text-gray-500" /> {/* 👈 Add icon like others */}
+                <Users className="h-5 w-5 text-gray-500" />
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-gray-900 mb-2">
-                {totalUsers || 0} {/* 👈 Replace with dynamic count if available */}
+              <p className="mb-2 text-2xl font-bold text-gray-900">
+                {totalUsers || 0}
               </p>
-              <p className="text-sm text-gray-500 mb-3">
+              <p className="mb-3 text-sm text-gray-500">
                 Registered customers and admins
               </p>
               <a
@@ -380,12 +604,8 @@ const {
               </a>
             </CardContent>
           </Card>
-
         </div>
       </main>
     </div>
   );
 }
-
-
-

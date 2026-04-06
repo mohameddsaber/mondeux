@@ -68,6 +68,11 @@ const paginationQuerySchema = z.object({
   status: orderStatusEnum.optional(),
 }).passthrough();
 
+const analyticsBaseQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(365).optional().default(30),
+  limit: z.coerce.number().int().min(1).max(25).optional().default(5),
+}).passthrough();
+
 export const registerSchema = z.object({
   body: z.object({
     name: z.string().trim().min(1, 'Name is required'),
@@ -229,6 +234,34 @@ export const ingestEventSchema = z.object({
   }),
   params: z.object({}),
   query: z.object({}),
+});
+
+export const analyticsFunnelQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({}).passthrough(),
+  query: analyticsBaseQuerySchema.pick({ days: true }),
+});
+
+export const analyticsTopProductsQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({}).passthrough(),
+  query: analyticsBaseQuerySchema.pick({ days: true, limit: true }),
+});
+
+export const analyticsRepeatCustomersQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({}).passthrough(),
+  query: analyticsBaseQuerySchema.pick({ days: true, limit: true }),
+});
+
+export const analyticsLowConversionPagesQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({}).passthrough(),
+  query: z.object({
+    days: z.coerce.number().int().min(1).max(365).optional().default(30),
+    limit: z.coerce.number().int().min(1).max(25).optional().default(5),
+    minVisitors: z.coerce.number().int().min(1).max(5000).optional().default(10),
+  }).passthrough(),
 });
 
 export const passthroughSchema = emptyRequestSchema;

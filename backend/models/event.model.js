@@ -83,6 +83,7 @@ const eventSchema = new mongoose.Schema(
 );
 
 eventSchema.index({ eventType: 1, occurredAt: -1 });
+eventSchema.index({ eventType: 1, product: 1, occurredAt: -1 });
 eventSchema.index({ user: 1, occurredAt: -1 });
 eventSchema.index({ sessionId: 1, occurredAt: -1 });
 
