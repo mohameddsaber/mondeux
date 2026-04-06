@@ -1,9 +1,9 @@
 // CheckoutPage.tsx
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Leaf, CreditCard, Truck, MapPin, Phone, Mail, User } from 'lucide-react';
+import { Leaf, CreditCard, Truck, MapPin, Phone, Mail, User, Tag } from 'lucide-react';
 import { getApiErrorMessage } from '../lib/api';
-import { useCartSummary, useCreateOrderMutation } from '../hooks/useStoreData';
+import { useCartSummary, useCreateOrderMutation, useOrderPricingQuery } from '../hooks/useStoreData';
 import { trackClientEvent } from '../lib/analytics';
 
 interface ShippingAddress {
@@ -25,7 +25,8 @@ interface CheckoutFormData {
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
-  const [packageProtection, setPackageProtection] = useState(true);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCouponCode, setAppliedCouponCode] = useState('');
   const [formData, setFormData] = useState<CheckoutFormData>({
     shippingAddress: {
       name: '',
@@ -42,11 +43,8 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const createOrderMutation = useCreateOrderMutation();
   const { items, subtotal, isPending: loading } = useCartSummary();
+  const pricingQuery = useOrderPricingQuery(appliedCouponCode, items.length > 0);
   const trackedCheckoutStartRef = useRef("");
-
-  const protectionPrice = 493.45;
-  const shippingCost = 0; // Free shipping
-  const taxRate = 0.14; // 14% tax
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -77,9 +75,10 @@ export default function CheckoutPage() {
     });
   }, [items, loading, subtotal]);
 
-  const tax = subtotal * taxRate;
-  const total = subtotal + (packageProtection ? protectionPrice : 0) + shippingCost + tax;
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const pricing = pricingQuery.data?.data;
+  const couponResult = pricingQuery.data?.coupon;
+  const hasInvalidCoupon = couponResult?.status === 'invalid';
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -117,9 +116,8 @@ export default function CheckoutPage() {
       const data = await createOrderMutation.mutateAsync({
           shippingAddress: formData.shippingAddress,
           paymentMethod: formData.paymentMethod,
-          shippingCost: shippingCost,
-          tax: tax,
-          customerNotes: formData.customerNotes
+          customerNotes: formData.customerNotes,
+          couponCode: appliedCouponCode,
       });
 
       if (data.success) {
@@ -132,6 +130,15 @@ export default function CheckoutPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleApplyCoupon = () => {
+    setAppliedCouponCode(couponInput.trim().toUpperCase());
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponInput('');
+    setAppliedCouponCode('');
   };
 
   const updateShippingField = (field: keyof ShippingAddress, value: string) => {
@@ -396,48 +403,96 @@ export default function CheckoutPage() {
                 <div className="space-y-3 border-t border-gray-300 pt-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal ({totalItems} items)</span>
-                    <span className="font-medium">LE {subtotal.toFixed(2)}</span>
+                    <span className="font-medium">LE {(pricing?.subtotal ?? subtotal).toFixed(2)}</span>
                   </div>
+                  {pricing?.firstOrderDiscount ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">First order discount</span>
+                      <span className="font-medium text-green-700">
+                        -LE {pricing.firstOrderDiscount.toFixed(2)}
+                      </span>
+                    </div>
+                  ) : null}
+                  {pricing?.campaignDiscount ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Campaign discount</span>
+                      <span className="font-medium text-green-700">
+                        -LE {pricing.campaignDiscount.toFixed(2)}
+                      </span>
+                    </div>
+                  ) : null}
+                  {pricing?.couponDiscount ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Coupon discount</span>
+                      <span className="font-medium text-green-700">
+                        -LE {pricing.couponDiscount.toFixed(2)}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Shipping</span>
-                    <span className="font-medium text-green-600">FREE</span>
+                    <span className={`font-medium ${(pricing?.shippingCost ?? 0) === 0 ? 'text-green-600' : ''}`}>
+                      {(pricing?.shippingCost ?? 0) === 0 ? 'FREE' : `LE ${(pricing?.shippingCost ?? 0).toFixed(2)}`}
+                    </span>
                   </div>
+                  {pricing?.shippingDiscount ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Shipping savings</span>
+                      <span className="font-medium text-green-700">
+                        -LE {pricing.shippingDiscount.toFixed(2)}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Tax (14%)</span>
-                    <span className="font-medium">LE {tax.toFixed(2)}</span>
+                    <span className="font-medium">LE {(pricing?.tax ?? 0).toFixed(2)}</span>
                   </div>
-                  {packageProtection && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Package Protection</span>
-                      <span className="font-medium">LE {protectionPrice.toFixed(2)}</span>
-                    </div>
-                  )}
                 </div>
 
-                {/* Package Protection Toggle */}
-                <div className="border border-gray-200 p-3 my-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-2 flex-grow pr-3">
-                      <Lock size={16} className="text-gray-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <span className="text-xs font-semibold">Package Protection</span>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          LE {protectionPrice.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
+                <div className="border border-gray-200 p-4 my-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Tag size={16} className="text-gray-600" />
+                    <span className="text-xs font-semibold uppercase tracking-wider">
+                      Coupon Code
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(event) => setCouponInput(event.target.value)}
+                      placeholder="Enter coupon"
+                      className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm uppercase focus:outline-none focus:border-black transition-colors"
+                    />
                     <button
                       type="button"
-                      onClick={() => setPackageProtection(!packageProtection)}
-                      className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${
-                        packageProtection ? 'bg-gray-800' : 'bg-gray-300'
-                      }`}
+                      onClick={handleApplyCoupon}
+                      className="rounded bg-black px-4 py-2 text-xs font-semibold tracking-wider text-white transition hover:bg-gray-800"
                     >
-                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
-                        packageProtection ? 'translate-x-5' : 'translate-x-0.5'
-                      }`} />
+                      Apply
                     </button>
                   </div>
+                  {appliedCouponCode ? (
+                    <div className={`rounded border px-3 py-2 text-xs ${
+                      hasInvalidCoupon
+                        ? 'border-red-200 bg-red-50 text-red-700'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    }`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <span>{couponResult?.message || `Coupon ${appliedCouponCode} applied`}</span>
+                        <button
+                          type="button"
+                          onClick={handleRemoveCoupon}
+                          className="font-semibold underline"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <p className="text-xs text-gray-500">
+                    Coupons, campaign discounts, free shipping thresholds, and first-order discounts are calculated automatically.
+                  </p>
                 </div>
 
                 {/* Carbon Neutral */}
@@ -448,19 +503,46 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
+                <div className="mb-6 rounded border border-dashed border-gray-300 bg-white p-3 text-xs text-gray-600">
+                  {pricing && pricing.amountToFreeShipping > 0
+                    ? `Add LE ${pricing.amountToFreeShipping.toFixed(2)} more to unlock free shipping.`
+                    : 'Free shipping threshold reached.'}
+                </div>
+
+                {pricing?.appliedPromotions.length ? (
+                  <div className="mb-6 rounded border border-gray-200 bg-white p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Applied Promotions
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {pricing.appliedPromotions.map((promotion, index) => (
+                        <div key={`${promotion.name}-${index}`} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">
+                            {promotion.name}
+                            {promotion.code ? ` (${promotion.code})` : ''}
+                          </span>
+                          <span className="font-medium text-green-700">
+                            -LE {promotion.amount.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
                 {/* Total */}
                 <div className="flex justify-between text-xl font-bold border-t border-gray-300 pt-4 mb-6">
                   <span>TOTAL</span>
-                  <span>LE {total.toFixed(2)}</span>
+                  <span>LE {(pricing?.totalAmount ?? subtotal).toFixed(2)}</span>
                 </div>
 
                 {/* Place Order Button */}
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || pricingQuery.isPending || hasInvalidCoupon || !pricing}
                   className="w-full py-4 bg-black text-white text-sm font-medium tracking-wider hover:bg-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  {submitting ? 'PLACING ORDER...' : 'PLACE ORDER'}
+                  {submitting ? 'PLACING ORDER...' : pricingQuery.isPending ? 'CALCULATING...' : 'PLACE ORDER'}
                 </button>
 
                 <p className="text-xs text-gray-500 text-center mt-4">

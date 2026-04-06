@@ -61,6 +61,53 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  pricing: {
+    baseShippingCost: {
+      type: Number,
+      default: 0,
+    },
+    couponCode: {
+      type: String,
+      default: '',
+      trim: true,
+      uppercase: true,
+    },
+    firstOrderDiscount: {
+      type: Number,
+      default: 0,
+    },
+    campaignDiscount: {
+      type: Number,
+      default: 0,
+    },
+    couponDiscount: {
+      type: Number,
+      default: 0,
+    },
+    shippingDiscount: {
+      type: Number,
+      default: 0,
+    },
+    freeShippingThreshold: {
+      type: Number,
+      default: 0,
+    },
+    appliedPromotions: [{
+      promotionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Promotion',
+        default: null,
+      },
+      name: String,
+      code: String,
+      type: String,
+      source: String,
+      amount: {
+        type: Number,
+        default: 0,
+      },
+    }],
+  },
   loyaltyPointsAwarded: {
     type: Number,
     default: 0,

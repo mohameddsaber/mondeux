@@ -1,12 +1,13 @@
 import express from 'express';
 
-import { getMyOrders, getOrderById, createOrder, cancelOrder, getAllOrders, updateOrderStatus, updateShippingInfo, updatePaymentStatus } from '../controllers/order.controllers.js';
+import { getMyOrders, getOrderById, createOrder, cancelOrder, getAllOrders, updateOrderStatus, updateShippingInfo, updatePaymentStatus, previewOrderPricing } from '../controllers/order.controllers.js';
 import  { protect, admin } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import {
   createOrderSchema,
   orderIdParamSchema,
   orderListQuerySchema,
+  orderPricingPreviewSchema,
   updateOrderStatusSchema,
   updatePaymentStatusSchema,
   updateShippingInfoSchema,
@@ -16,6 +17,7 @@ const router = express.Router();
 // Customer routes
 router.get('/', protect, validateRequest(orderListQuerySchema), getMyOrders);
 router.get('/:id', protect, validateRequest(orderIdParamSchema), getOrderById);
+router.post('/preview', protect, validateRequest(orderPricingPreviewSchema), previewOrderPricing);
 router.post('/', protect, validateRequest(createOrderSchema), createOrder);
 router.patch('/:id/cancel', protect, validateRequest(orderIdParamSchema), cancelOrder);
 

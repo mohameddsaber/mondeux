@@ -64,6 +64,9 @@ interface Order {
     shippingCost: number;
     tax: number;
     discount: number;
+    pricing?: {
+        couponCode?: string;
+    };
     totalAmount: number;
     paymentMethod: 'card' | 'cash_on_delivery';
     paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
@@ -130,6 +133,10 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose })
                            <DollarSign size={20} /> Payment & Status
                         </h3>
                         {renderDetailRow('Total Amount', formatCurrency(order.totalAmount))}
+                        {order.discount > 0 && renderDetailRow(
+                            `Discount${order.pricing?.couponCode ? ` (${order.pricing.couponCode})` : ''}`,
+                            <span className="text-green-700">-{formatCurrency(order.discount)}</span>
+                        )}
                         {renderDetailRow('Payment Status', (
                             <Badge variant="secondary" className={order.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}>
                                 {order.paymentStatus.toUpperCase()}

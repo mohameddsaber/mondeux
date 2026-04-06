@@ -4,8 +4,9 @@ import assert from 'node:assert/strict';
 import Cart from '../models/cart.model.js';
 import Order from '../models/order.model.js';
 import Product from '../models/product.model.js';
+import Promotion from '../models/promotion.model.js';
 import User from '../models/user.model.js';
-import { createOrder } from '../controllers/order.controllers.js';
+import { createOrder, previewOrderPricing } from '../controllers/order.controllers.js';
 import {
   createMockReq,
   createMockRes,
@@ -67,6 +68,14 @@ test('createOrder converts the cart into an order, decrements stock, and clears 
     populate: async () => cart,
   }));
   stubs.stub(Product, 'findById', async () => product);
+  stubs.stub(Promotion, 'find', () => ({
+    lean: async () => [],
+  }));
+  stubs.stub(Promotion, 'findOne', () => ({
+    lean: async () => null,
+  }));
+  stubs.stub(Promotion, 'updateMany', async () => null);
+  stubs.stub(Order, 'countDocuments', async () => 0);
   stubs.stub(User, 'findById', async () => ({
     _id: 'user-1',
     loyalty: {
@@ -94,8 +103,6 @@ test('createOrder converts the cart into an order, decrements stock, and clears 
         phone: '01000000000',
       },
       paymentMethod: 'cash_on_delivery',
-      shippingCost: 20,
-      tax: 10,
       customerNotes: 'Leave at the door',
     },
   });
@@ -112,8 +119,11 @@ test('createOrder converts the cart into an order, decrements stock, and clears 
   assert.equal(res.body.message, 'Order placed successfully');
   assert.equal(createdOrderPayload.user, 'user-1');
   assert.equal(createdOrderPayload.subtotal, 200);
-  assert.equal(createdOrderPayload.loyaltyPointsAwarded, 2);
-  assert.equal(createdOrderPayload.totalAmount, 230);
+  assert.equal(createdOrderPayload.discount, 20);
+  assert.equal(createdOrderPayload.shippingCost, 120);
+  assert.equal(createdOrderPayload.tax, 25.2);
+  assert.equal(createdOrderPayload.loyaltyPointsAwarded, 1);
+  assert.equal(createdOrderPayload.totalAmount, 325.2);
   assert.equal(createdOrderPayload.items.length, 1);
   assert.match(createdOrderPayload.orderNumber, /^ORD-/);
   assert.deepEqual(savedCart, {
@@ -164,4 +174,50 @@ test('createOrder rejects empty carts', async () => {
     success: false,
     message: 'Cart is empty',
   });
+});
+
+test('previewOrderPricing returns first-order discount pricing for the current cart', async () => {
+  const stubs = createStubRegistry();
+
+  stubs.stub(Cart, 'findOne', () => ({
+    populate: async () => ({
+      items: [
+        {
+          product: { _id: 'product-1', name: 'Gold Ring' },
+          quantity: 2,
+          price: 500,
+          size: 'M',
+          material: 'gold',
+        },
+      ],
+    }),
+  }));
+  stubs.stub(Order, 'countDocuments', async () => 0);
+  stubs.stub(Promotion, 'find', () => ({
+    lean: async () => [],
+  }));
+  stubs.stub(Promotion, 'findOne', () => ({
+    lean: async () => null,
+  }));
+
+  const req = createMockReq({
+    body: {
+      couponCode: '',
+    },
+  });
+  const res = createMockRes();
+
+  try {
+    await previewOrderPricing(req, res);
+  } finally {
+    stubs.restoreAll();
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.success, true);
+  assert.equal(res.body.data.subtotal, 1000);
+  assert.equal(res.body.data.firstOrderDiscount, 100);
+  assert.equal(res.body.data.shippingCost, 120);
+  assert.equal(res.body.data.tax, 126);
+  assert.equal(res.body.data.totalAmount, 1146);
 });

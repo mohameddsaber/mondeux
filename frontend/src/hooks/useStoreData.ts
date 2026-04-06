@@ -231,6 +231,23 @@ export interface OrderRecord {
   shippingCost: number;
   tax: number;
   discount: number;
+  pricing?: {
+    baseShippingCost: number;
+    couponCode: string;
+    firstOrderDiscount: number;
+    campaignDiscount: number;
+    couponDiscount: number;
+    shippingDiscount: number;
+    freeShippingThreshold: number;
+    appliedPromotions: Array<{
+      promotionId: string | null;
+      name: string;
+      code: string;
+      type: string;
+      source: string;
+      amount: number;
+    }>;
+  };
   totalAmount: number;
   paymentMethod: "card" | "cash_on_delivery";
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
@@ -259,6 +276,44 @@ type OrderDetailResponse = {
   data: OrderRecord;
 };
 
+export interface AppliedPromotionRecord {
+  promotionId: string | null;
+  name: string;
+  code: string;
+  type: string;
+  source: string;
+  amount: number;
+}
+
+export interface OrderPricingSummary {
+  subtotal: number;
+  discountedSubtotal: number;
+  baseShippingCost: number;
+  shippingCost: number;
+  shippingDiscount: number;
+  tax: number;
+  totalAmount: number;
+  discount: number;
+  firstOrderDiscount: number;
+  campaignDiscount: number;
+  couponDiscount: number;
+  couponCode: string;
+  freeShippingThreshold: number;
+  amountToFreeShipping: number;
+  appliedPromotions: AppliedPromotionRecord[];
+  firstOrderEligible: boolean;
+}
+
+type OrderPricingResponse = {
+  success: boolean;
+  data: OrderPricingSummary;
+  coupon?: {
+    code: string;
+    status: "applied" | "invalid";
+    message: string;
+  } | null;
+};
+
 type CreateOrderInput = {
   shippingAddress: {
     name: string;
@@ -270,9 +325,32 @@ type CreateOrderInput = {
     phone: string;
   };
   paymentMethod: "card" | "paypal" | "cash_on_delivery";
-  shippingCost: number;
-  tax: number;
   customerNotes: string;
+  couponCode?: string;
+};
+
+export interface PromotionRecord {
+  _id: string;
+  name: string;
+  description: string;
+  code: string | null;
+  type: "percentage" | "fixed_amount" | "free_shipping";
+  value: number;
+  autoApply: boolean;
+  isActive: boolean;
+  minSubtotal: number;
+  firstOrderOnly: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  usageLimit: number | null;
+  usageCount: number;
+  perUserLimit: number | null;
+  createdAt: string;
+}
+
+type PromotionListResponse = {
+  success: boolean;
+  data: PromotionRecord[];
 };
 
 type AuthPayload = {
@@ -1192,6 +1270,17 @@ export const useCreateOrderMutation = () => {
   });
 };
 
+export const useOrderPricingQuery = (couponCode: string, enabled = true) =>
+  useQuery({
+    queryKey: queryKeys.promotions.pricing(couponCode),
+    queryFn: () =>
+      apiRequest<OrderPricingResponse>("/orders/preview", {
+        method: "POST",
+        json: { couponCode },
+      }),
+    enabled,
+  });
+
 export const useAdminOrdersQuery = (limit?: number) =>
   useQuery({
     queryKey: queryKeys.orders.admin(limit),
@@ -1374,6 +1463,53 @@ export const useDeleteSubCategoryMutation = () => {
       }),
     onSuccess: async () => {
       await invalidateCategoryQueries(queryClient);
+    },
+  });
+};
+
+export const useAdminPromotionsQuery = () =>
+  useQuery({
+    queryKey: queryKeys.admin.promotions,
+    queryFn: () =>
+      apiRequest<PromotionListResponse>("/promotions/admin"),
+  });
+
+export const useCreatePromotionMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: unknown) =>
+      apiRequest("/promotions/admin", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.promotions,
+      });
+    },
+  });
+};
+
+export const useUpdatePromotionMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      promotionId,
+      payload,
+    }: {
+      promotionId: string;
+      payload: unknown;
+    }) =>
+      apiRequest(`/promotions/admin/${promotionId}`, {
+        method: "PATCH",
+        json: payload,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.promotions,
+      });
     },
   });
 };

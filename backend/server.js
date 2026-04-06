@@ -18,6 +18,7 @@ import salesRoutes from './routes/sales.routes.js';
 import eventRoutes from './routes/event.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import reviewRoutes from './routes/review.routes.js';
+import promotionRoutes from './routes/promotion.routes.js';
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api/sales', salesRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/promotions', promotionRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
@@ -78,7 +80,6 @@ app.listen(appConfig.port, appConfig.host, () => {
 
 
 export default app;
-
 
 
 

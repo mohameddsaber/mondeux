@@ -16,6 +16,7 @@ const paymentMethodEnum = z.enum(['card', 'cash_on_delivery']);
 const orderStatusEnum = z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']);
 const paymentStatusEnum = z.enum(['pending', 'paid', 'failed', 'refunded']);
 const reviewStatusEnum = z.enum(['pending', 'approved', 'rejected']);
+const promotionTypeEnum = z.enum(['percentage', 'fixed_amount', 'free_shipping']);
 const analyticsEventTypeEnum = z.enum([
   'product_view',
   'search',
@@ -173,7 +174,16 @@ export const createOrderSchema = z.object({
     shippingCost: z.coerce.number().min(0).optional().default(0),
     tax: z.coerce.number().min(0).optional().default(0),
     customerNotes: z.string().optional().default(''),
+    couponCode: z.string().trim().max(64).optional().default(''),
     sessionId: optionalSessionIdSchema,
+  }),
+  params: z.object({}),
+  query: z.object({}),
+});
+
+export const orderPricingPreviewSchema = z.object({
+  body: z.object({
+    couponCode: z.string().trim().max(64).optional().default(''),
   }),
   params: z.object({}),
   query: z.object({}),
@@ -385,6 +395,46 @@ export const analyticsLowConversionPagesQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(25).optional().default(5),
     minVisitors: z.coerce.number().int().min(1).max(5000).optional().default(10),
   }).passthrough(),
+});
+
+export const promotionListQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({}).passthrough(),
+  query: z.object({
+    active: z
+      .union([z.boolean(), z.string().trim().toLowerCase().transform((value) => value === 'true')])
+      .optional(),
+  }).passthrough(),
+});
+
+const promotionBodySchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(400).optional().default(''),
+  code: z.string().trim().max(64).optional().nullable(),
+  type: promotionTypeEnum,
+  value: z.coerce.number().min(0),
+  autoApply: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  minSubtotal: z.coerce.number().min(0).optional(),
+  firstOrderOnly: z.boolean().optional(),
+  startsAt: z.union([z.coerce.date(), z.null()]).optional(),
+  endsAt: z.union([z.coerce.date(), z.null()]).optional(),
+  usageLimit: z.union([z.coerce.number().int().min(1), z.null()]).optional(),
+  perUserLimit: z.union([z.coerce.number().int().min(1), z.null()]).optional(),
+});
+
+export const createPromotionSchema = z.object({
+  body: promotionBodySchema,
+  params: z.object({}),
+  query: z.object({}),
+});
+
+export const updatePromotionSchema = z.object({
+  body: promotionBodySchema.partial(),
+  params: z.object({
+    id: objectIdSchema,
+  }),
+  query: z.object({}),
 });
 
 export const passthroughSchema = emptyRequestSchema;

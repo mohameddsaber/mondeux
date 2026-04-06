@@ -1,6 +1,7 @@
 import Order from '../models/order.model.js';
 import Cart from '../models/cart.model.js';
 import Product from '../models/product.model.js';
+import Promotion from '../models/promotion.model.js';
 import Sale from '../models/sales.model.js';
 import User from '../models/user.model.js';
 import { trackEvent } from '../utils/trackEvent.js';
@@ -9,6 +10,106 @@ import {
   deductLoyaltyPoints,
 } from '../utils/loyaltyHelpers.js';
 import { calculatePurchasePoints } from '../utils/loyaltyProgram.js';
+import { calculateOrderPricing } from '../utils/pricing.js';
+
+const getPopulatedCart = (userId) => Cart.findOne({ user: userId }).populate('items.product');
+
+const buildOrderItemsFromCart = async (cart) => {
+  const orderItems = [];
+
+  for (const item of cart.items) {
+    const product = await Product.findById(item.product._id);
+
+    if (!product || !product.isActive) {
+      return {
+        error: {
+          success: false,
+          message: `Product ${item.product.name} is no longer available`,
+        },
+      };
+    }
+
+    const materialVariant = product.materialVariants.find(
+      (mv) => mv.material === item.material
+    );
+
+    if (!materialVariant) {
+      return {
+        error: {
+          success: false,
+          message: `Material variant "${item.material}" not found for ${product.name}`,
+        },
+      };
+    }
+
+    const sizeVariant = materialVariant.sizeVariants.find(
+      (sv) => sv.label === item.size
+    );
+
+    if (!sizeVariant) {
+      return {
+        error: {
+          success: false,
+          message: `Size "${item.size}" not found for ${product.name} in ${item.material}`,
+        },
+      };
+    }
+
+    if (sizeVariant.stock < item.quantity) {
+      return {
+        error: {
+          success: false,
+          message: `Insufficient stock for ${product.name} (${item.material} - ${item.size}). Only ${sizeVariant.stock} available.`,
+        },
+      };
+    }
+
+    orderItems.push({
+      productDoc: product,
+      cartItem: item,
+      materialVariant,
+      sizeVariant,
+      payload: {
+        product: product._id,
+        name: product.name,
+        size: item.size,
+        material: item.material,
+        quantity: item.quantity,
+        price: item.price,
+        image: product.images?.[0]?.url || '',
+      },
+    });
+  }
+
+  return { orderItems };
+};
+
+export const previewOrderPricing = async (req, res) => {
+  try {
+    const cart = await getPopulatedCart(req.user._id);
+
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cart is empty',
+      });
+    }
+
+    const { pricing, coupon } = await calculateOrderPricing({
+      userId: req.user._id,
+      items: cart.items,
+      couponCode: req.body.couponCode || '',
+    });
+
+    res.json({
+      success: true,
+      data: pricing,
+      coupon,
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
 
 export const getMyOrders = async (req, res) => {
   try {
@@ -73,9 +174,8 @@ export const createOrder = async (req, res) => {
     const {
       shippingAddress,
       paymentMethod,
-      shippingCost = 0,
-      tax = 0,
-      customerNotes = ''
+      customerNotes = '',
+      couponCode = '',
     } = req.body;
 
     if (!shippingAddress || !shippingAddress.name || !shippingAddress.street || 
@@ -86,8 +186,7 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    const cart = await Cart.findOne({ user: req.user._id })
-      .populate('items.product');
+    const cart = await getPopulatedCart(req.user._id);
 
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({
@@ -96,81 +195,41 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    const orderItems = [];
-    let subtotal = 0;
+    const { orderItems: stockCheckedItems, error } = await buildOrderItemsFromCart(cart);
 
-    for (const item of cart.items) {
-      const product = await Product.findById(item.product._id);
+    if (error) {
+      return res.status(400).json(error);
+    }
 
-      if (!product || !product.isActive) {
-        return res.status(400).json({
-          success: false,
-          message: `Product ${item.product.name} is no longer available`
-        });
-      }
+    const { pricing, coupon } = await calculateOrderPricing({
+      userId: req.user._id,
+      items: cart.items,
+      couponCode,
+    });
 
-      const materialVariant = product.materialVariants.find(
-        mv => mv.material === item.material
-      );
-
-      if (!materialVariant) {
-        return res.status(400).json({
-          success: false,
-          message: `Material variant "${item.material}" not found for ${product.name}`
-        });
-      }
-
-      const sizeVariant = materialVariant.sizeVariants.find(
-        sv => sv.label === item.size
-      );
-
-      if (!sizeVariant) {
-        return res.status(400).json({
-          success: false,
-          message: `Size "${item.size}" not found for ${product.name} in ${item.material}`
-        });
-      }
-
-      if (sizeVariant.stock < item.quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `Insufficient stock for ${product.name} (${item.material} - ${item.size}). Only ${sizeVariant.stock} available.`
-        });
-      }
-
-      const variantImage = product.images?.[0]?.url || 
-                          product.images?.[0]?.url || 
-                          '';
-
-      orderItems.push({
-        product: product._id,
-        name: product.name,
-        size: item.size,
-        material: item.material,
-        quantity: item.quantity,
-        price: item.price,
-        image: variantImage
+    if (couponCode && coupon?.status === 'invalid') {
+      return res.status(400).json({
+        success: false,
+        message: coupon.message,
       });
+    }
 
-      subtotal += item.price * item.quantity;
+    for (const item of stockCheckedItems) {
+      item.sizeVariant.stock -= item.cartItem.quantity;
 
-      sizeVariant.stock -= item.quantity;
-      
-      materialVariant.stock = materialVariant.sizeVariants.reduce(
-        (total, sv) => total + sv.stock, 
+      item.materialVariant.stock = item.materialVariant.sizeVariants.reduce(
+        (total, sizeVariant) => total + sizeVariant.stock,
         0
       );
 
-      await product.save();
+      await item.productDoc.save();
     }
 
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-    const totalAmount = subtotal + shippingCost + tax;
     const user = await User.findById(req.user._id);
     const loyaltyPointsAwarded = user
       ? calculatePurchasePoints({
-        subtotal,
+        subtotal: pricing.discountedSubtotal,
         lifetimePoints: user.loyalty?.lifetimePoints || 0,
       })
       : 0;
@@ -178,18 +237,40 @@ export const createOrder = async (req, res) => {
     const order = await Order.create({
       orderNumber,
       user: req.user._id,
-      items: orderItems,
+      items: stockCheckedItems.map((item) => item.payload),
       shippingAddress,
-      subtotal,
-      shippingCost,
-      tax,
+      subtotal: pricing.subtotal,
+      shippingCost: pricing.shippingCost,
+      tax: pricing.tax,
+      discount: pricing.discount,
+      pricing: {
+        baseShippingCost: pricing.baseShippingCost,
+        couponCode: pricing.couponCode,
+        firstOrderDiscount: pricing.firstOrderDiscount,
+        campaignDiscount: pricing.campaignDiscount,
+        couponDiscount: pricing.couponDiscount,
+        shippingDiscount: pricing.shippingDiscount,
+        freeShippingThreshold: pricing.freeShippingThreshold,
+        appliedPromotions: pricing.appliedPromotions,
+      },
       loyaltyPointsAwarded,
-      totalAmount,
+      totalAmount: pricing.totalAmount,
       paymentMethod,
       status: 'pending',
       paymentStatus: 'pending',
       customerNotes
     });
+
+    const promotionIds = pricing.appliedPromotions
+      .map((promotion) => promotion.promotionId)
+      .filter(Boolean);
+
+    if (promotionIds.length > 0) {
+      await Promotion.updateMany(
+        { _id: { $in: promotionIds } },
+        { $inc: { usageCount: 1 } }
+      );
+    }
 
     if (user && loyaltyPointsAwarded > 0) {
       awardLoyaltyPoints({
@@ -200,7 +281,7 @@ export const createOrder = async (req, res) => {
         metadata: {
           orderId: order._id,
           orderNumber,
-          subtotal,
+          subtotal: pricing.discountedSubtotal,
         },
       });
       await user.save();
@@ -219,11 +300,14 @@ export const createOrder = async (req, res) => {
       metadata: {
         orderNumber,
         paymentMethod,
-        totalAmount,
-        subtotal,
-        shippingCost,
-        tax,
-        itemCount: orderItems.reduce((sum, item) => sum + item.quantity, 0),
+        totalAmount: pricing.totalAmount,
+        subtotal: pricing.subtotal,
+        discountedSubtotal: pricing.discountedSubtotal,
+        shippingCost: pricing.shippingCost,
+        tax: pricing.tax,
+        discount: pricing.discount,
+        couponCode: pricing.couponCode,
+        itemCount: stockCheckedItems.reduce((sum, item) => sum + item.payload.quantity, 0),
       },
     });
 

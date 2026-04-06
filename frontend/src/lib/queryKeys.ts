@@ -16,6 +16,10 @@ export const queryKeys = {
     admin: (params: Record<string, unknown>) =>
       ["reviews", "admin", params] as const,
   },
+  promotions: {
+    pricing: (couponCode: string) =>
+      ["promotions", "pricing", couponCode] as const,
+  },
   products: {
     list: (scope: string, params: Record<string, unknown>) =>
       ["products", "list", scope, params] as const,
@@ -31,6 +35,7 @@ export const queryKeys = {
     users: ["admin", "users"] as const,
     categories: ["admin", "categories"] as const,
     subCategories: ["admin", "subCategories"] as const,
+    promotions: ["admin", "promotions"] as const,
     salesSummary: ["admin", "sales", "summary"] as const,
     salesByDate: ["admin", "sales", "byDate"] as const,
     analytics: {

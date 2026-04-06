@@ -33,6 +33,10 @@ interface Order {
   subtotal: number;
   shippingCost: number;
   tax: number;
+  discount?: number;
+  pricing?: {
+    couponCode?: string;
+  };
   totalAmount: number;
   paymentMethod: string;
   status: string;
@@ -225,6 +229,16 @@ export default function OrderConfirmationPage() {
               <span className="text-gray-600">Tax</span>
               <span className="font-medium">LE {order.tax.toFixed(2)}</span>
             </div>
+            {(order.discount || 0) > 0 ? (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">
+                  Discount{order.pricing?.couponCode ? ` (${order.pricing.couponCode})` : ''}
+                </span>
+                <span className="font-medium text-green-600">
+                  -LE {(order.discount || 0).toFixed(2)}
+                </span>
+              </div>
+            ) : null}
             <div className="flex justify-between text-xl font-bold border-t border-gray-300 pt-3 mt-3">
               <span>Total</span>
               <span>LE {order.totalAmount.toFixed(2)}</span>
