@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
+import { apiFetch } from "../lib/api";
 import { fetchCart } from "../utils/cartManager";
 
 interface LoginFormProps {
@@ -52,13 +53,9 @@ function LoginForm({ onToggle }: LoginFormProps) {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:4000/api/users/login', {
+      const response = await apiFetch('/users/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData)
+        json: formData,
       });
 
       const data = await response.json();
@@ -211,18 +208,14 @@ function SignupForm({ onToggle }: SignupFormProps) {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:4000/api/users/register', {
+      const response = await apiFetch('/users/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
+        json: {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
           password: formData.password
-        })
+        }
       });
 
       const data = await response.json();

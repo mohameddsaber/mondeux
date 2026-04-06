@@ -1,5 +1,4 @@
-
-const API_URL = 'http://localhost:4000/api/cart'; // Adjust the port/path if needed
+import { apiFetch } from "../lib/api";
 
 export interface CartItem {
   id: string;
@@ -11,6 +10,23 @@ export interface CartItem {
   quantity: number;
   image: string;
 }
+
+interface ServerCartItem {
+  product: {
+    _id: string;
+    name: string;
+    images?: Array<{ url?: string }>;
+  };
+  size?: string;
+  material?: string;
+  price: number;
+  quantity: number;
+}
+
+interface ServerCartData {
+  items?: ServerCartItem[];
+}
+
 let globalCartItems: CartItem[] = [];
 let globalCartListeners: ((items: CartItem[]) => void)[] = [];
 
@@ -25,10 +41,10 @@ const getCommonHeaders = () => {
 };
 
 
-const mapServerCartToClientCart = (serverCartData: any): CartItem[] => {
+const mapServerCartToClientCart = (serverCartData: ServerCartData | null | undefined): CartItem[] => {
   if (!serverCartData || !serverCartData.items) return [];
 
-  return serverCartData.items.map((item: any) => ({
+  return serverCartData.items.map((item) => ({
     id: item.product._id, 
     productId: item.product._id,
     name: item.product.name,
@@ -44,10 +60,9 @@ const mapServerCartToClientCart = (serverCartData: any): CartItem[] => {
 export const fetchCart = async (): Promise<void> => {
   try {
 
-    const response = await fetch(API_URL, {
+    const response = await apiFetch('/cart', {
       method: 'GET',
       headers: getCommonHeaders(),
-      credentials: 'include', 
     });
 
     if (response.status === 401 || response.status === 403) {
@@ -76,11 +91,10 @@ export interface AddToCartPayload {
 
 export const addToCart = async (payload: AddToCartPayload): Promise<void> => {
   try {
-    const response = await fetch(`${API_URL}/items`, {
+    const response = await apiFetch('/cart/items', {
       method: 'POST',
       headers: getCommonHeaders(),
-      credentials: 'include',
-      body: JSON.stringify(payload), 
+      json: payload,
     });
 
     if (!response.ok) {
@@ -105,11 +119,10 @@ export const updateCartItemQuantity = async (
     try {
         const payload = { size, material, delta }; 
         
-        const response = await fetch(`${API_URL}/items/${productId}`, {
+        const response = await apiFetch(`/cart/items/${productId}`, {
             method: 'PUT',
             headers: getCommonHeaders(),
-            credentials: 'include',
-            body: JSON.stringify(payload),
+            json: payload,
         });
 
         if (!response.ok) {
@@ -141,14 +154,13 @@ export const removeFromCart = async (
   material: string
 ) => {
   try {
-    const response = await fetch(`${API_URL}/items/${productId}`, {
+    const response = await apiFetch(`/cart/items/${productId}`, {
       method: 'DELETE',
       headers: {
         ...getCommonHeaders(),
         'Content-Type': 'application/json',
       },
-      credentials: 'include',
-      body: JSON.stringify({ size, material }),
+      json: { size, material },
     });
 
     if (!response.ok) {

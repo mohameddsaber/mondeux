@@ -24,6 +24,7 @@ import CategoriesPageAdmin from "./pages/Admin/CategoriesPage";
 import Footer from './components/Footer';
 import TestimonialsSection from "./components/TestimonialsSection";
 import HeaderAdmin from "./components/HeaderAdmin";
+import { apiFetch } from "./lib/api";
 
 const CategoryPageWrapper = () => {
     const { categorySlug } = useParams<{ categorySlug: string }>();
@@ -48,9 +49,8 @@ function App() {
 
     const checkSession = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/users/me", {
+        const res = await apiFetch("/users/me", {
           method: "GET",
-          credentials: "include",
         });
 
         const data = await res.json();
