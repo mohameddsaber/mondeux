@@ -21,6 +21,10 @@ test('register creates a user, sets auth cookie, and returns the public payload'
     email,
     phone,
     role: 'user',
+    loyalty: {},
+    async save() {
+      return this;
+    },
   }));
 
   const req = createMockReq({
@@ -46,7 +50,13 @@ test('register creates a user, sets auth cookie, and returns the public payload'
     _id: 'user-123',
     name: 'Mona',
     email: 'mona@example.com',
+    phone: '01000000000',
     role: 'user',
+    loyalty: {
+      pointsBalance: 5,
+      lifetimePoints: 5,
+      tier: 'bronze',
+    },
   });
   assert.equal(res.cookies.length, 1);
   assert.equal(res.cookies[0].name, 'jwt');
@@ -61,7 +71,13 @@ test('login authenticates valid credentials and sets auth cookie', async () => {
       _id: 'user-123',
       name: 'Mona',
       email: 'mona@example.com',
+      phone: undefined,
       role: 'user',
+      loyalty: {
+        pointsBalance: 0,
+        lifetimePoints: 0,
+        tier: 'bronze',
+      },
       password: 'hashed-password',
     }),
   }));
@@ -88,7 +104,13 @@ test('login authenticates valid credentials and sets auth cookie', async () => {
     _id: 'user-123',
     name: 'Mona',
     email: 'mona@example.com',
+    phone: undefined,
     role: 'user',
+    loyalty: {
+      pointsBalance: 0,
+      lifetimePoints: 0,
+      tier: 'bronze',
+    },
   });
   assert.equal(res.cookies.length, 1);
   assert.equal(res.cookies[0].name, 'jwt');

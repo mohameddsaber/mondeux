@@ -4,6 +4,11 @@ import { generateTokenAndSetCookie } from '../utils/generateToken.js';
 import { protect, admin } from '../middleware/auth.js';
 import { appConfig } from '../config/env.js';
 import { trackEvent } from '../utils/trackEvent.js';
+import {
+  awardLoyaltyPoints,
+  serializeSessionUser,
+} from '../utils/loyaltyHelpers.js';
+import { LOYALTY_SIGNUP_BONUS } from '../utils/loyaltyProgram.js';
 
 
 export const isAuthenticated = [
@@ -46,6 +51,13 @@ export const register = async (req, res) => {
     }
 
     const user = await User.create({ name, email, password, phone });
+    awardLoyaltyPoints({
+      user,
+      points: LOYALTY_SIGNUP_BONUS,
+      type: 'signup_bonus',
+      description: 'Welcome bonus for joining Mondeux',
+    });
+    await user.save();
 
     generateTokenAndSetCookie(user._id, res);
 
@@ -62,12 +74,7 @@ export const register = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "User registered successfully",
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      data: serializeSessionUser(user),
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -128,12 +135,7 @@ export const login = async (req, res) => {
     res.json({
       success: true,
       message: "Logged in successfully",
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      data: serializeSessionUser(user),
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -188,11 +190,7 @@ export const updateUserProfile = async (req, res) => {
     res.json({
       success: true,
       data: {
-        _id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        phone: updatedUser.phone,
-        role: updatedUser.role,
+        ...serializeSessionUser(updatedUser),
         token: generateTokenAndSetCookie(updatedUser._id,res)
       }
     });

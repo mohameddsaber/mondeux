@@ -2,7 +2,13 @@ import Order from '../models/order.model.js';
 import Cart from '../models/cart.model.js';
 import Product from '../models/product.model.js';
 import Sale from '../models/sales.model.js';
+import User from '../models/user.model.js';
 import { trackEvent } from '../utils/trackEvent.js';
+import {
+  awardLoyaltyPoints,
+  deductLoyaltyPoints,
+} from '../utils/loyaltyHelpers.js';
+import { calculatePurchasePoints } from '../utils/loyaltyProgram.js';
 
 export const getMyOrders = async (req, res) => {
   try {
@@ -161,6 +167,13 @@ export const createOrder = async (req, res) => {
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     const totalAmount = subtotal + shippingCost + tax;
+    const user = await User.findById(req.user._id);
+    const loyaltyPointsAwarded = user
+      ? calculatePurchasePoints({
+        subtotal,
+        lifetimePoints: user.loyalty?.lifetimePoints || 0,
+      })
+      : 0;
 
     const order = await Order.create({
       orderNumber,
@@ -170,12 +183,28 @@ export const createOrder = async (req, res) => {
       subtotal,
       shippingCost,
       tax,
+      loyaltyPointsAwarded,
       totalAmount,
       paymentMethod,
       status: 'pending',
       paymentStatus: 'pending',
       customerNotes
     });
+
+    if (user && loyaltyPointsAwarded > 0) {
+      awardLoyaltyPoints({
+        user,
+        points: loyaltyPointsAwarded,
+        type: 'purchase',
+        description: `Points earned from order ${orderNumber}`,
+        metadata: {
+          orderId: order._id,
+          orderNumber,
+          subtotal,
+        },
+      });
+      await user.save();
+    }
 
     cart.items = [];
     cart.totalAmount = 0;
@@ -266,6 +295,28 @@ export const cancelOrder = async (req, res) => {
     order.status = 'cancelled';
     order.cancelledAt = new Date();
     await order.save();
+
+    if (order.loyaltyPointsAwarded > 0) {
+      const user = await User.findById(order.user);
+
+      if (user) {
+        deductLoyaltyPoints({
+          user,
+          points: order.loyaltyPointsAwarded,
+          type: 'purchase_reversal',
+          description: `Points reversed after cancellation of order ${order.orderNumber}`,
+          metadata: {
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+          },
+          countAsRedeemed: false,
+          affectLifetimePoints: true,
+          direction: 'reversed',
+        });
+
+        await user.save();
+      }
+    }
 
     res.json({
       success: true,

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import Cart from '../models/cart.model.js';
 import Order from '../models/order.model.js';
 import Product from '../models/product.model.js';
+import User from '../models/user.model.js';
 import { createOrder } from '../controllers/order.controllers.js';
 import {
   createMockReq,
@@ -66,6 +67,15 @@ test('createOrder converts the cart into an order, decrements stock, and clears 
     populate: async () => cart,
   }));
   stubs.stub(Product, 'findById', async () => product);
+  stubs.stub(User, 'findById', async () => ({
+    _id: 'user-1',
+    loyalty: {
+      lifetimePoints: 0,
+    },
+    async save() {
+      return this;
+    },
+  }));
   stubs.stub(Order, 'create', async (payload) => {
     createdOrderPayload = payload;
     return {
@@ -102,6 +112,7 @@ test('createOrder converts the cart into an order, decrements stock, and clears 
   assert.equal(res.body.message, 'Order placed successfully');
   assert.equal(createdOrderPayload.user, 'user-1');
   assert.equal(createdOrderPayload.subtotal, 200);
+  assert.equal(createdOrderPayload.loyaltyPointsAwarded, 2);
   assert.equal(createdOrderPayload.totalAmount, 230);
   assert.equal(createdOrderPayload.items.length, 1);
   assert.match(createdOrderPayload.orderNumber, /^ORD-/);

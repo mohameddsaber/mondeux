@@ -18,12 +18,12 @@ export default function LoyaltyScheme({ isOpen, setIsOpen }: LoyaltySchemeNoAuth
       <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-2xl">
         {/* Accessibility: hidden dialog title */}
         <VisuallyHidden>
-          <DialogTitle>Introducing Loyalty Scheme</DialogTitle>
+          <DialogTitle>Introducing Mondeux Circle</DialogTitle>
         </VisuallyHidden>
 
         {/* Header */}
         <div className="flex items-center justify-between border-b px-6 py-4">
-          <h2 className="text-lg font-semibold">Introducing Loyalty Scheme</h2>
+          <h2 className="text-lg font-semibold">Introducing Mondeux Circle</h2>
 
         </div>
 
@@ -42,7 +42,7 @@ export default function LoyaltyScheme({ isOpen, setIsOpen }: LoyaltySchemeNoAuth
                 <div>
                   <p className="font-medium">Make a purchase</p>
                   <p className="text-sm text-gray-500">
-                    1 point per £1 (LE 65.44 EGP)
+                    Points on every order, with better earning at higher tiers
                   </p>
                 </div>
               </div>
@@ -51,7 +51,7 @@ export default function LoyaltyScheme({ isOpen, setIsOpen }: LoyaltySchemeNoAuth
                 <User className="w-6 h-6" />
                 <div>
                   <p className="font-medium">Create an account</p>
-                  <p className="text-sm text-gray-500">5 points</p>
+                  <p className="text-sm text-gray-500">5 welcome points</p>
                 </div>
               </div>
 
@@ -68,14 +68,14 @@ export default function LoyaltyScheme({ isOpen, setIsOpen }: LoyaltySchemeNoAuth
           {/* Redeem Points */}
           <div className="p-6 space-y-5">
             <h3 className="font-medium text-lg">
-              Redeem points for rewards from Serge DeNimes
+              Redeem points for Mondeux rewards
             </h3>
 
             <div className="space-y-4">
               {[
-                { reward: "£5 voucher", points: 50 },
-                { reward: "£10 voucher", points: 100 },
-                { reward: "£25 voucher", points: 250 },
+                { reward: "5% off reward", points: 50 },
+                { reward: "Free shipping reward", points: 75 },
+                { reward: "10% off reward", points: 100 },
               ].map(({ reward, points }) => (
                 <div key={reward} className="flex items-center gap-4">
                   <Gift className="w-6 h-6" />
@@ -92,7 +92,7 @@ export default function LoyaltyScheme({ isOpen, setIsOpen }: LoyaltySchemeNoAuth
         {/* Footer (Login/Signup) */}
         <div className="border-t text-center p-6 space-y-3">
           <p className="text-sm text-gray-600">
-            Log in or sign up to Serge DeNimes to earn rewards today
+            Log in or sign up to Mondeux to start earning rewards
           </p>
           <div className="flex justify-center gap-3">
             <Button

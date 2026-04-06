@@ -43,6 +43,7 @@ function App() {
   const { data: currentUser, isPending: isCheckingAdmin } = useCurrentUserQuery();
   const isAuthenticated = Boolean(currentUser);
   const isAdmin = currentUser?.role === "admin";
+  const loyaltyPoints = currentUser?.loyalty?.pointsBalance ?? 0;
 
   useEffect(() => {
     if (
@@ -145,17 +146,19 @@ function App() {
 
 
       {/* Loyalty Scheme Button */}
-      <button
-        onClick={() => setIsLoyaltyOpen(true)}
-        className="fixed bottom-6 right-6 bg-black text-white px-6 py-3 rounded-full shadow-lg hover:bg-gray-800 transition-all duration-300 flex items-center gap-2 z-40 font-[Karla] font-bold text-sm tracking-wider"
-      >
-        <Award className="w-5 h-5" />
-        <span className="hidden sm:inline">Loyalty Scheme</span>
-        <span className="inline sm:hidden">Loyalty</span>
-        <span className="bg-white text-black rounded-full w-6 h-6 flex items-center justify-center text-xs">
-          6
-        </span>
-      </button>
+      {!isAdmin && (
+        <button
+          onClick={() => setIsLoyaltyOpen(true)}
+          className="fixed bottom-6 right-6 bg-black text-white px-6 py-3 rounded-full shadow-lg hover:bg-gray-800 transition-all duration-300 flex items-center gap-2 z-40 font-[Karla] font-bold text-sm tracking-wider"
+        >
+          <Award className="w-5 h-5" />
+          <span className="hidden sm:inline">Loyalty Scheme</span>
+          <span className="inline sm:hidden">Loyalty</span>
+          <span className="bg-white text-black rounded-full min-w-6 h-6 px-1 flex items-center justify-center text-xs">
+            {loyaltyPoints}
+          </span>
+        </button>
+      )}
 
       {/* Loyalty Scheme Modal */}
       {isAuthenticated && <LoyaltyScheme

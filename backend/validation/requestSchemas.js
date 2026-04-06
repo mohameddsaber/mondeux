@@ -104,6 +104,30 @@ export const loginSchema = z.object({
   query: z.object({}),
 });
 
+export const loyaltyBirthdaySchema = z.object({
+  body: z.object({
+    birthday: z.coerce.date(),
+  }),
+  params: z.object({}),
+  query: z.object({}),
+});
+
+export const loyaltyActivityClaimSchema = z.object({
+  body: z.object({
+    activityId: z.string().trim().min(1, 'Activity is required'),
+  }),
+  params: z.object({}),
+  query: z.object({}),
+});
+
+export const loyaltyRewardRedeemSchema = z.object({
+  body: z.object({
+    rewardId: z.string().trim().min(1, 'Reward is required'),
+  }),
+  params: z.object({}),
+  query: z.object({}),
+});
+
 export const addToCartSchema = z.object({
   body: z.object({
     productId: objectIdSchema,

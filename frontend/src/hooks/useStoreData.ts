@@ -16,6 +16,11 @@ export interface SessionUser {
   email: string;
   phone?: string;
   role: string;
+  loyalty?: {
+    pointsBalance: number;
+    lifetimePoints: number;
+    tier: string;
+  };
 }
 
 interface SessionResponse {
@@ -383,6 +388,75 @@ interface ServerCartResponse {
   };
 }
 
+export interface LoyaltyTier {
+  id: string;
+  name: string;
+  minLifetimePoints: number;
+  pointsMultiplier: number;
+  birthdayBonus: number;
+  benefits: string[];
+}
+
+export interface LoyaltyAction {
+  id: string;
+  name: string;
+  points: number;
+  icon: string;
+  repeatable: boolean;
+  claimedAt: string | null;
+  isClaimed: boolean;
+  canClaim: boolean;
+}
+
+export interface LoyaltyReward {
+  id: string;
+  name: string;
+  description: string;
+  pointsCost: number;
+  kind: string;
+  value: number;
+  affordable: boolean;
+}
+
+export interface LoyaltyHistoryEntry {
+  type: string;
+  direction: "earned" | "redeemed" | "reversed";
+  points: number;
+  description: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface LoyaltyRewardRedemption {
+  rewardId: string;
+  rewardName: string;
+  pointsCost: number;
+  code: string;
+  redeemedAt: string;
+  status: string;
+}
+
+export interface LoyaltyAccount {
+  pointsBalance: number;
+  lifetimePoints: number;
+  redeemedPoints: number;
+  tier: string;
+  tiers: LoyaltyTier[];
+  currentTier: LoyaltyTier;
+  nextTier: LoyaltyTier | null;
+  birthday: string | null;
+  availableActions: LoyaltyAction[];
+  rewards: LoyaltyReward[];
+  recentHistory: LoyaltyHistoryEntry[];
+  rewardRedemptions: LoyaltyRewardRedemption[];
+}
+
+type LoyaltyResponse = {
+  success: boolean;
+  data: LoyaltyAccount;
+  message?: string;
+};
+
 const normalizeCatalogSort = (sortBy = "", searchQuery = "") => {
   if (sortBy) {
     return sortBy === "best-selling" ? "popular" : sortBy;
@@ -490,6 +564,19 @@ const invalidateCartQueries = async (queryClient: ReturnType<typeof useQueryClie
   });
 };
 
+const invalidateLoyaltyQueries = async (
+  queryClient: ReturnType<typeof useQueryClient>
+) => {
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.loyalty.detail,
+    }),
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.auth.currentUser,
+    }),
+  ]);
+};
+
 export const useCurrentUserQuery = () =>
   useQuery({
     queryKey: queryKeys.auth.currentUser,
@@ -531,6 +618,7 @@ export const useLoginMutation = () => {
           queryKey: queryKeys.auth.currentUser,
         }),
         invalidateCartQueries(queryClient),
+        invalidateLoyaltyQueries(queryClient),
       ]);
     },
   });
@@ -554,6 +642,7 @@ export const useRegisterMutation = () => {
           queryKey: queryKeys.auth.currentUser,
         }),
         invalidateCartQueries(queryClient),
+        invalidateLoyaltyQueries(queryClient),
       ]);
     },
   });
@@ -573,7 +662,60 @@ export const useLogoutMutation = () => {
           queryKey: queryKeys.auth.currentUser,
         }),
         invalidateCartQueries(queryClient),
+        invalidateLoyaltyQueries(queryClient),
       ]);
+    },
+  });
+};
+
+export const useLoyaltyQuery = () =>
+  useQuery({
+    queryKey: queryKeys.loyalty.detail,
+    queryFn: () => apiRequest<LoyaltyResponse>("/users/loyalty"),
+    select: (result) => result.data,
+  });
+
+export const useUpdateLoyaltyBirthdayMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (birthday: string) =>
+      apiRequest<LoyaltyResponse>("/users/loyalty/birthday", {
+        method: "PATCH",
+        json: { birthday },
+      }),
+    onSuccess: async () => {
+      await invalidateLoyaltyQueries(queryClient);
+    },
+  });
+};
+
+export const useClaimLoyaltyActivityMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (activityId: string) =>
+      apiRequest<LoyaltyResponse>("/users/loyalty/claim", {
+        method: "POST",
+        json: { activityId },
+      }),
+    onSuccess: async () => {
+      await invalidateLoyaltyQueries(queryClient);
+    },
+  });
+};
+
+export const useRedeemLoyaltyRewardMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (rewardId: string) =>
+      apiRequest<LoyaltyResponse>("/users/loyalty/redeem", {
+        method: "POST",
+        json: { rewardId },
+      }),
+    onSuccess: async () => {
+      await invalidateLoyaltyQueries(queryClient);
     },
   });
 };
@@ -771,9 +913,13 @@ export const useCreateOrderMutation = () => {
         },
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.orders.mine(1, 10).slice(0, 2),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.orders.mine(1, 10).slice(0, 2),
+        }),
+        invalidateCartQueries(queryClient),
+        invalidateLoyaltyQueries(queryClient),
+      ]);
     },
   });
 };

@@ -6,6 +6,9 @@ import { appConfig } from '../config/env.js';
 const getRequestToken = (req) =>
   req.signedCookies?.jwt || req.cookies?.jwt || null;
 
+const SESSION_USER_SELECT =
+  '_id name email phone role loyalty.pointsBalance loyalty.lifetimePoints loyalty.tier';
+
 // Protect routes - verify JWT token
 export const protect = async (req, res, next) => {
   try {
@@ -23,7 +26,7 @@ export const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, appConfig.jwtSecret);
 
     // 3️⃣ Get user and attach to request
-    req.user = await User.findById(decoded.id).select("_id name email role");
+    req.user = await User.findById(decoded.id).select(SESSION_USER_SELECT);
 
     if (!req.user) {
       return res.status(404).json({
@@ -51,7 +54,7 @@ export const attachUserIfPresent = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, appConfig.jwtSecret);
-    const user = await User.findById(decoded.id).select("_id name email role");
+    const user = await User.findById(decoded.id).select(SESSION_USER_SELECT);
 
     if (user) {
       req.user = user;
