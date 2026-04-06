@@ -15,6 +15,7 @@ const materialEnum = z.enum(['gold', 'silver', 'stainless steel']);
 const paymentMethodEnum = z.enum(['card', 'cash_on_delivery']);
 const orderStatusEnum = z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']);
 const paymentStatusEnum = z.enum(['pending', 'paid', 'failed', 'refunded']);
+const reviewStatusEnum = z.enum(['pending', 'approved', 'rejected']);
 const analyticsEventTypeEnum = z.enum([
   'product_view',
   'search',
@@ -302,6 +303,47 @@ export const categoryAndSubCategoryProductsQuerySchema = z.object({
     subCategorySlug: slugParamSchema.shape.slug,
   }),
   query: catalogQuerySchema,
+});
+
+export const productReviewsParamSchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({
+    productId: objectIdSchema,
+  }),
+  query: z.object({}).passthrough(),
+});
+
+export const createReviewSchema = z.object({
+  body: z.object({
+    rating: z.coerce.number().min(1).max(5),
+    title: z.string().trim().max(120).optional().default(''),
+    comment: z.string().trim().min(10).max(2000),
+  }),
+  params: z.object({
+    productId: objectIdSchema,
+  }),
+  query: z.object({}),
+});
+
+export const reviewListQuerySchema = z.object({
+  body: z.object({}).passthrough(),
+  params: z.object({}).passthrough(),
+  query: z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    status: reviewStatusEnum.optional(),
+  }).passthrough(),
+});
+
+export const reviewModerationSchema = z.object({
+  body: z.object({
+    status: z.enum(['approved', 'rejected']),
+    moderationNote: z.string().trim().max(500).optional().default(''),
+  }),
+  params: z.object({
+    reviewId: objectIdSchema,
+  }),
+  query: z.object({}),
 });
 
 export const ingestEventSchema = z.object({

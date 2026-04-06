@@ -22,6 +22,7 @@ import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import ProductPage from "./pages/Admin/ProductPage";
 import OrderPage from "./pages/Admin/OrdersPage";
 import CategoriesPageAdmin from "./pages/Admin/CategoriesPage";
+import ReviewsPage from "./pages/Admin/ReviewsPage";
 import Footer from './components/Footer';
 import TestimonialsSection from "./components/TestimonialsSection";
 import HeaderAdmin from "./components/HeaderAdmin";
@@ -141,6 +142,14 @@ function App() {
               element={
                 <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
                   <CategoriesPageAdmin />
+                </ProtectedAdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/reviews" 
+              element={
+                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+                  <ReviewsPage />
                 </ProtectedAdminRoute>
               } 
             />

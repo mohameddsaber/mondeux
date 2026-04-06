@@ -131,6 +131,67 @@ type ProductDetailResponse = {
   relatedProducts: CatalogProduct[];
 };
 
+export interface ProductReview {
+  _id: string;
+  rating: number;
+  title: string;
+  comment: string;
+  status: "pending" | "approved" | "rejected";
+  verifiedPurchase: boolean;
+  userName: string;
+  createdAt: string;
+  moderationNote: string;
+}
+
+export interface ProductReviewStats {
+  averageRating: number;
+  totalReviews: number;
+}
+
+export interface ProductReviewsPayload {
+  stats: ProductReviewStats;
+  items: ProductReview[];
+  viewerReview: Pick<
+    ProductReview,
+    "_id" | "rating" | "title" | "comment" | "status" | "moderationNote"
+  > | null;
+}
+
+type ProductReviewsResponse = {
+  success: boolean;
+  data: ProductReviewsPayload;
+};
+
+export interface AdminReviewRecord extends ProductReview {
+  product: {
+    _id: string;
+    name: string;
+    slug: string;
+  } | null;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+  } | null;
+  moderatedAt?: string | null;
+  moderatedBy?: {
+    _id: string;
+    name: string;
+    email: string;
+  } | null;
+}
+
+type AdminReviewsResponse = {
+  success: boolean;
+  data: AdminReviewRecord[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+};
+
 type OrderStatus =
   | "pending"
   | "processing"
@@ -1061,6 +1122,36 @@ export const useProductDetailQuery = (slug: string) =>
     enabled: Boolean(slug),
   });
 
+export const useProductReviewsQuery = (productId: string) =>
+  useQuery({
+    queryKey: queryKeys.reviews.product(productId),
+    queryFn: () =>
+      apiRequest<ProductReviewsResponse>(`/reviews/product/${productId}`),
+    select: (result) => result.data,
+    enabled: Boolean(productId),
+  });
+
+export const useCreateProductReviewMutation = (productId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: {
+      rating: number;
+      title: string;
+      comment: string;
+    }) =>
+      apiRequest(`/reviews/product/${productId}`, {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.reviews.product(productId),
+      });
+    },
+  });
+};
+
 export const useMyOrdersQuery = (page: number, limit: number) =>
   useQuery({
     queryKey: queryKeys.orders.mine(page, limit),
@@ -1375,4 +1466,45 @@ export const useAdminDashboardQueries = () => {
     repeatCustomersQuery: results[8],
     lowConversionPagesQuery: results[9],
   };
+};
+
+export const useAdminReviewsQuery = (
+  status: "pending" | "approved" | "rejected" | "all"
+) =>
+  useQuery({
+    queryKey: queryKeys.reviews.admin({ status }),
+    queryFn: () =>
+      apiRequest<AdminReviewsResponse>(
+        `/reviews/admin${status === "all" ? "" : `?status=${status}`}`
+      ),
+  });
+
+export const useModerateReviewMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      reviewId,
+      status,
+      moderationNote,
+    }: {
+      reviewId: string;
+      status: "approved" | "rejected";
+      moderationNote?: string;
+    }) =>
+      apiRequest(`/reviews/${reviewId}/moderate`, {
+        method: "PATCH",
+        json: { status, moderationNote: moderationNote || "" },
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["reviews"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["products"],
+        }),
+      ]);
+    },
+  });
 };

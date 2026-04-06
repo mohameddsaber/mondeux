@@ -65,6 +65,7 @@ const HeaderAdmin = () => {
           </Link>
           <Link to="/admin/products" className="hover:text-gray-600 transition">PRODUCTS</Link>
           <Link to="/admin/categories" className="hover:text-gray-600 transition">CATEGORIES</Link>
+          <Link to="/admin/reviews" className="hover:text-gray-600 transition">REVIEWS</Link>
 
         </nav>
       </div>

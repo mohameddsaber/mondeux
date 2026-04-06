@@ -11,6 +11,11 @@ export const queryKeys = {
   wishlist: {
     detail: ["wishlist", "detail"] as const,
   },
+  reviews: {
+    product: (productId: string) => ["reviews", "product", productId] as const,
+    admin: (params: Record<string, unknown>) =>
+      ["reviews", "admin", params] as const,
+  },
   products: {
     list: (scope: string, params: Record<string, unknown>) =>
       ["products", "list", scope, params] as const,
