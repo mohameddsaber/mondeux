@@ -1,4 +1,5 @@
 import express from 'express';
+import { createRateLimiter } from '../middleware/rateLimit.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import { loginSchema, registerSchema } from '../validation/requestSchemas.js';
 import {
@@ -22,10 +23,15 @@ import {
 import { protect, admin } from '../middleware/auth.js';
 
 const router = express.Router();
+const authRateLimit = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Too many login or signup attempts. Please try again later.',
+});
 
 // Public routes
-router.post('/register', validateRequest(registerSchema), register);
-router.post('/login', validateRequest(loginSchema), login);
+router.post('/register', authRateLimit, validateRequest(registerSchema), register);
+router.post('/login', authRateLimit, validateRequest(loginSchema), login);
 
 
 
