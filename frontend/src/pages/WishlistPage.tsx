@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Heart, ShoppingBag, TrendingDown, AlertTriangle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Heart, TrendingDown, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api";
@@ -18,30 +18,32 @@ const formatCurrency = (amount: number) =>
     maximumFractionDigits: 2,
   })}`;
 
-const getFirstAvailableVariant = (item: WishlistItem) => {
-  for (const materialVariant of item.materialVariants) {
-    const sizeVariant =
-      materialVariant.sizeVariants.find(
-        (size) => size.isAvailable && size.stock > 0
-      ) || null;
+const getAvailableMaterials = (item: WishlistItem) =>
+  item.materialVariants.filter((materialVariant) =>
+    materialVariant.sizeVariants.some((size) => size.isAvailable && size.stock > 0)
+  );
 
-    if (sizeVariant) {
-      return {
-        material: materialVariant.material,
-        size: sizeVariant.label,
-      };
-    }
-  }
+const getAvailableSizes = (item: WishlistItem, material: string) => {
+  const materialVariant = item.materialVariants.find(
+    (variant) => variant.material === material
+  );
 
-  return null;
+  return (materialVariant?.sizeVariants || []).filter(
+    (size) => size.isAvailable && size.stock > 0
+  );
 };
 
 export default function WishlistPage() {
+  const [variantPickerItemId, setVariantPickerItemId] = useState<string | null>(null);
+  const [selectedMaterials, setSelectedMaterials] = useState<Record<string, string>>({});
+  const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({});
   const { data: currentUser, isPending: isCheckingUser } = useCurrentUserQuery();
   const wishlistQuery = useWishlistQuery();
   const addToCartMutation = useAddToCartMutation();
   const removeFromWishlistMutation = useRemoveFromWishlistMutation();
   const items = wishlistQuery.data || [];
+  const activeVariantItem =
+    items.find((item) => item._id === variantPickerItemId) || null;
 
   const prompts = useMemo(() => {
     const lowStockCount = items.filter((item) => item.isLowStock).length;
@@ -50,11 +52,49 @@ export default function WishlistPage() {
     return { lowStockCount, priceDropCount };
   }, [items]);
 
-  const handleMoveToCart = async (item: WishlistItem) => {
-    const variant = getFirstAvailableVariant(item);
+  const openVariantPicker = (item: WishlistItem) => {
+    const availableMaterials = getAvailableMaterials(item);
 
-    if (!variant) {
+    if (availableMaterials.length === 0) {
       toast.error("This wishlist item is currently out of stock");
+      return;
+    }
+
+    const defaultMaterial =
+      selectedMaterials[item._id] || availableMaterials[0].material;
+    const availableSizes = getAvailableSizes(item, defaultMaterial);
+    const defaultSize = selectedSizes[item._id] || availableSizes[0]?.label || "";
+
+    setSelectedMaterials((current) => ({
+      ...current,
+      [item._id]: defaultMaterial,
+    }));
+    setSelectedSizes((current) => ({
+      ...current,
+      [item._id]: defaultSize,
+    }));
+    setVariantPickerItemId(item._id);
+  };
+
+  const handleMaterialChange = (item: WishlistItem, material: string) => {
+    const availableSizes = getAvailableSizes(item, material);
+
+    setSelectedMaterials((current) => ({
+      ...current,
+      [item._id]: material,
+    }));
+    setSelectedSizes((current) => ({
+      ...current,
+      [item._id]: availableSizes[0]?.label || "",
+    }));
+  };
+
+  const handleMoveToCart = async (item: WishlistItem) => {
+    const selectedMaterial = selectedMaterials[item._id];
+    const selectedSize = selectedSizes[item._id];
+
+    if (!selectedMaterial || !selectedSize) {
+      toast.error("Choose a material and size first");
       return;
     }
 
@@ -62,10 +102,11 @@ export default function WishlistPage() {
       await addToCartMutation.mutateAsync({
         productId: item._id,
         quantity: 1,
-        size: variant.size,
-        material: variant.material,
+        size: selectedSize,
+        material: selectedMaterial,
       });
       await removeFromWishlistMutation.mutateAsync(item._id);
+      setVariantPickerItemId(null);
       toast.success("Moved to cart");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to move item to cart"));
@@ -162,8 +203,6 @@ export default function WishlistPage() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {items.map((item) => {
-              const variant = getFirstAvailableVariant(item);
-
               return (
                 <article
                   key={item._id}
@@ -232,24 +271,16 @@ export default function WishlistPage() {
                       ) : null}
                     </div>
 
-                    <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-600">
-                      {variant
-                        ? `Move to cart will add the first available variant: ${variant.material} / ${variant.size}.`
-                        : "This item has no available variant right now."}
-                    </div>
-
                     <div className="flex flex-col gap-3 sm:flex-row">
                       <button
                         type="button"
-                        onClick={() => handleMoveToCart(item)}
+                        onClick={() => openVariantPicker(item)}
                         disabled={
-                          !variant ||
                           addToCartMutation.isPending ||
                           removeFromWishlistMutation.isPending
                         }
                         className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-bold tracking-wider text-white transition hover:bg-gray-800 disabled:bg-gray-300"
                       >
-                        <ShoppingBag className="h-4 w-4" />
                         Move To Cart
                       </button>
                       <Link
@@ -266,6 +297,128 @@ export default function WishlistPage() {
           </div>
         )}
       </div>
+
+      {activeVariantItem ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">
+                  Move To Cart
+                </p>
+                <h2 className="mt-2 text-2xl font-bold font-[Karla] text-gray-900">
+                  {activeVariantItem.name}
+                </h2>
+                <p className="mt-2 text-sm text-gray-600">
+                  Choose the material and size you want to add to cart.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVariantPickerItemId(null)}
+                className="rounded-full px-3 py-2 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-black"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-5">
+              <div>
+                <p className="mb-2 text-xs font-bold tracking-wider text-gray-500">
+                  MATERIAL
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {getAvailableMaterials(activeVariantItem).map((materialVariant) => {
+                    const selectedMaterial =
+                      selectedMaterials[activeVariantItem._id]
+                      || getAvailableMaterials(activeVariantItem)[0]?.material
+                      || "";
+
+                    return (
+                      <button
+                        key={materialVariant.material}
+                        type="button"
+                        onClick={() =>
+                          handleMaterialChange(activeVariantItem, materialVariant.material)
+                        }
+                        className={`rounded-full border px-3 py-2 text-xs font-medium uppercase transition ${
+                          selectedMaterial === materialVariant.material
+                            ? "border-black bg-black text-white"
+                            : "border-gray-300 text-gray-700"
+                        }`}
+                      >
+                        {materialVariant.material}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-bold tracking-wider text-gray-500">
+                  SIZE
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(() => {
+                    const selectedMaterial =
+                      selectedMaterials[activeVariantItem._id]
+                      || getAvailableMaterials(activeVariantItem)[0]?.material
+                      || "";
+                    const availableSizes = selectedMaterial
+                      ? getAvailableSizes(activeVariantItem, selectedMaterial)
+                      : [];
+                    const selectedSize =
+                      selectedSizes[activeVariantItem._id]
+                      || availableSizes[0]?.label
+                      || "";
+
+                    return availableSizes.map((sizeVariant) => (
+                      <button
+                        key={sizeVariant.sku}
+                        type="button"
+                        onClick={() =>
+                          setSelectedSizes((current) => ({
+                            ...current,
+                            [activeVariantItem._id]: sizeVariant.label,
+                          }))
+                        }
+                        className={`rounded-full border px-3 py-2 text-xs font-medium uppercase transition ${
+                          selectedSize === sizeVariant.label
+                            ? "border-black bg-black text-white"
+                            : "border-gray-300 text-gray-700"
+                        }`}
+                      >
+                        {sizeVariant.label}
+                      </button>
+                    ));
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => handleMoveToCart(activeVariantItem)}
+                disabled={
+                  addToCartMutation.isPending ||
+                  removeFromWishlistMutation.isPending
+                }
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-bold tracking-wider text-white transition hover:bg-gray-800 disabled:bg-gray-300"
+              >
+                Move To Cart
+              </button>
+              <button
+                type="button"
+                onClick={() => setVariantPickerItemId(null)}
+                className="inline-flex flex-1 items-center justify-center rounded-full border border-gray-300 px-5 py-3 text-sm font-bold tracking-wider text-gray-900 transition hover:border-black"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

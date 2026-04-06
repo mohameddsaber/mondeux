@@ -413,6 +413,26 @@ type WishlistResponse = {
   data: WishlistItem[];
 };
 
+const createOptimisticWishlistItem = (productId: string): WishlistItem => ({
+  _id: productId,
+  name: "",
+  slug: "",
+  images: [],
+  rating: 0,
+  category: null,
+  subCategory: null,
+  materialVariants: [],
+  minVariantPrice: 0,
+  totalStock: 0,
+  lowStockThreshold: 0,
+  savedPrice: 0,
+  addedAt: new Date().toISOString(),
+  isLowStock: false,
+  isOutOfStock: false,
+  priceDropped: false,
+  priceDropAmount: 0,
+});
+
 export interface LoyaltyTier {
   id: string;
   name: string;
@@ -780,7 +800,10 @@ export const useCartQuery = () =>
   });
 
 export const useWishlistQuery = () =>
-  useQuery({
+  {
+    const currentUserQuery = useCurrentUserQuery();
+
+    return useQuery({
     queryKey: queryKeys.wishlist.detail,
     queryFn: async () => {
       try {
@@ -799,8 +822,9 @@ export const useWishlistQuery = () =>
         throw error;
       }
     },
-    initialData: [],
+    enabled: currentUserQuery.isSuccess && Boolean(currentUserQuery.data),
   });
+  };
 
 export const useWishlistSummary = () => {
   const wishlistQuery = useWishlistQuery();
@@ -822,8 +846,38 @@ export const useAddToWishlistMutation = () => {
       apiRequest<WishlistResponse>(`/users/wishlist/${productId}`, {
         method: "POST",
       }),
-    onSuccess: async () => {
-      await invalidateWishlistQueries(queryClient);
+    onMutate: async (productId) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.wishlist.detail,
+      });
+
+      const previousWishlist = queryClient.getQueryData<WishlistItem[]>(
+        queryKeys.wishlist.detail
+      );
+
+      queryClient.setQueryData<WishlistItem[]>(
+        queryKeys.wishlist.detail,
+        (current = []) => {
+          if (current.some((item) => item._id === productId)) {
+            return current;
+          }
+
+          return [...current, createOptimisticWishlistItem(productId)];
+        }
+      );
+
+      return { previousWishlist };
+    },
+    onSuccess: async (result) => {
+      queryClient.setQueryData(queryKeys.wishlist.detail, result.data);
+    },
+    onError: async (_error, _productId, context) => {
+      if (context?.previousWishlist) {
+        queryClient.setQueryData(
+          queryKeys.wishlist.detail,
+          context.previousWishlist
+        );
+      }
     },
   });
 };
@@ -836,8 +890,32 @@ export const useRemoveFromWishlistMutation = () => {
       apiRequest<WishlistResponse>(`/users/wishlist/${productId}`, {
         method: "DELETE",
       }),
-    onSuccess: async () => {
-      await invalidateWishlistQueries(queryClient);
+    onMutate: async (productId) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.wishlist.detail,
+      });
+
+      const previousWishlist = queryClient.getQueryData<WishlistItem[]>(
+        queryKeys.wishlist.detail
+      );
+
+      queryClient.setQueryData<WishlistItem[]>(
+        queryKeys.wishlist.detail,
+        (current = []) => current.filter((item) => item._id !== productId)
+      );
+
+      return { previousWishlist };
+    },
+    onSuccess: async (result) => {
+      queryClient.setQueryData(queryKeys.wishlist.detail, result.data);
+    },
+    onError: async (_error, _productId, context) => {
+      if (context?.previousWishlist) {
+        queryClient.setQueryData(
+          queryKeys.wishlist.detail,
+          context.previousWishlist
+        );
+      }
     },
   });
 };
