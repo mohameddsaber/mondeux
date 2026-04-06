@@ -62,7 +62,7 @@ const ProductItemPage: React.FC = () => {
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [quantity, setQuantity] = useState(1); 
+  const quantity = 1;
   
   useEffect(() => {
     if (!slug) {
@@ -408,7 +408,7 @@ const ProductItemPage: React.FC = () => {
                   </button>
                 </div>
               </div>
-              <ProductAccordian description={product.description} />
+              <ProductAccordian description={product?.description ?? ""} />
             </div>
           </div>
         </div>

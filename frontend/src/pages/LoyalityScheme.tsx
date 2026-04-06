@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { X, Gift, Award, Layers, User, HelpCircle, Lock, Cake, Instagram, Mail, Facebook, Twitter, Trophy, Star, Crown } from 'lucide-react';
 
-export default function LoyaltyScheme({isOpen, setIsOpen}) {
+interface LoyaltySchemeProps {
+  isOpen: boolean;
+  setIsOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+export default function LoyaltyScheme({ isOpen, setIsOpen }: LoyaltySchemeProps) {
 
   const [activeTab, setActiveTab] = useState('earn');
 

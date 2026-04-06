@@ -1,11 +1,16 @@
+import type { Dispatch, SetStateAction } from "react";
 import { Lock, User, Cake, Gift } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // import this
 
+interface LoyaltySchemeNoAuthProps {
+  isOpen: boolean;
+  setIsOpen: Dispatch<SetStateAction<boolean>>;
+}
 
-export default function LoyaltyScheme({ isOpen, setIsOpen }) {
+export default function LoyaltyScheme({ isOpen, setIsOpen }: LoyaltySchemeNoAuthProps) {
   const navigate = useNavigate();
 
   return (

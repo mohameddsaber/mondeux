@@ -1,4 +1,4 @@
-import  { useState, useEffect, useCallback } from 'react';
+import  { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { Package, Truck, Calendar, DollarSign, X, CheckCircle, Clock } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -81,6 +81,9 @@ interface Pagination {
     pages: number;
 }
 
+const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : 'An unexpected error occurred';
+
 // --- API UTILITIES (MOCKED) ---
 const API_BASE_URL = 'http://localhost:4000/api/orders';
 
@@ -105,7 +108,7 @@ interface OrderDetailsModalProps {
 }
 
 const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose }) => {
-    const renderDetailRow = (label: string, value: string | number | JSX.Element) => (
+    const renderDetailRow = (label: string, value: string | number | ReactNode) => (
         <div className="flex justify-between py-2 border-b border-dashed">
             <span className="text-sm font-medium text-gray-600">{label}</span>
             <span className="text-sm font-semibold text-gray-900">{value}</span>
@@ -209,8 +212,8 @@ export default function OrderHistoryPage() {
             setOrders(result.data || []);
             setPagination(result.pagination || { page: 1, limit: 10, total: 0, pages: 1 });
 
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(getErrorMessage(err));
             setOrders([]);
         } finally {
             setLoading(false);
@@ -236,8 +239,8 @@ export default function OrderHistoryPage() {
             const result = await response.json();
             setSelectedOrder(result.data);
 
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(getErrorMessage(err));
         }
     };
 

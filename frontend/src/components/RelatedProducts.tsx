@@ -6,7 +6,7 @@ interface MinimalProduct {
     name: string;
     slug: string;
     images: { url: string; alt: string; isPrimary: boolean }[];
-    rating: number;
+    rating?: number;
 
 }
 

@@ -47,16 +47,17 @@ type MaterialVariant = {
 };
 
 type ImageItem = { url: string; alt?: string; isPrimary?: boolean };
+type CategoryRef = string | { _id?: string; name?: string; slug?: string };
 
 type Product = {
   _id?: string;
   name: string;
   slug?: string;
   description?: string;
-  category?: string;
-  subCategory?: string;
+  category?: CategoryRef;
+  subCategory?: CategoryRef;
   materialVariants?: MaterialVariant[];
-  tags?: string[];
+  tags?: string[] | string;
   images?: ImageItem[];
   isActive?: boolean;
   isFeatured?: boolean;
@@ -100,7 +101,26 @@ export default function ProductsPage() {
 
   const [form, setForm] = useState<Product>(emptyProduct());
 
-  const unwrap = (res: any) => (res && (res.data ?? res)) || res || [];
+  const unwrap = (res: unknown) => {
+    if (res && typeof res === "object" && "data" in res) {
+      return (res as { data?: unknown }).data ?? [];
+    }
+
+    return res ?? [];
+  };
+
+  const getCategoryLabel = (category?: CategoryRef) => {
+    if (!category) {
+      return "—";
+    }
+
+    return typeof category === "string"
+      ? category
+      : category.name || category.slug || "—";
+  };
+
+  const getRefValue = (value?: CategoryRef) =>
+    typeof value === "string" ? value : value?._id || "";
 
   useEffect(() => {
     const load = async () => {
@@ -109,8 +129,8 @@ export default function ProductsPage() {
         const [prodRes, catRes] = await Promise.all([getProducts(), getCategories()]);
         const prods = unwrap(prodRes);
         const cats = unwrap(catRes);
-        setProducts(Array.isArray(prods) ? prods : prods.data ?? prods);
-        setCategories(Array.isArray(cats) ? cats : cats.data ?? cats);
+        setProducts(Array.isArray(prods) ? (prods as Product[]) : []);
+        setCategories(Array.isArray(cats) ? (cats as Category[]) : []);
       } catch (err) {
         console.error("Failed to load products/categories", err);
       } finally {
@@ -130,8 +150,9 @@ export default function ProductsPage() {
       try {
         const res = await getSubCategories(); // your util returns whole list
         const allSubs = unwrap(res) as SubCategory[];
+        const selectedCategoryId = getRefValue(form.category);
         // filter client-side by category id (server-side filter endpoint optional)
-        const filtered = allSubs.filter((s) => s.category === form.category);
+        const filtered = allSubs.filter((s) => s.category === selectedCategoryId);
         setSubCategories(filtered);
       } catch (err) {
         console.error("Failed to load subcategories", err);
@@ -219,17 +240,28 @@ export default function ProductsPage() {
       return copy;
     });
 
-  const updateMaterialField = (mIdx: number, field: string, value: any) =>
+  const updateMaterialField = (mIdx: number, field: string, value: unknown) =>
     setForm((prev) => {
-      const copy = JSON.parse(JSON.stringify(prev));
-      copy.materialVariants[mIdx][field] = value;
+      const copy = JSON.parse(JSON.stringify(prev)) as Product;
+      const materialVariants = copy.materialVariants || [];
+      const variant = materialVariants[mIdx];
+
+      if (variant) {
+        (variant as Record<string, unknown>)[field] = value;
+      }
+
       return copy;
     });
 
-  const updateSizeField = (mIdx: number, sIdx: number, field: string, value: any) =>
+  const updateSizeField = (mIdx: number, sIdx: number, field: string, value: unknown) =>
     setForm((prev) => {
-      const copy = JSON.parse(JSON.stringify(prev));
-      copy.materialVariants[mIdx].sizeVariants[sIdx][field] = value;
+      const copy = JSON.parse(JSON.stringify(prev)) as Product;
+      const sizeVariant = copy.materialVariants?.[mIdx]?.sizeVariants?.[sIdx];
+
+      if (sizeVariant) {
+        (sizeVariant as Record<string, unknown>)[field] = value;
+      }
+
       return copy;
     });
 
@@ -241,38 +273,43 @@ export default function ProductsPage() {
 
   const removeImage = (idx: number) =>
     setForm((prev) => {
-      const copy = JSON.parse(JSON.stringify(prev));
-      copy.images.splice(idx, 1);
+      const copy = JSON.parse(JSON.stringify(prev)) as Product;
+      copy.images?.splice(idx, 1);
       return copy;
     });
 
-  const updateImage = (idx: number, key: keyof ImageItem, value: any) =>
+  const updateImage = (idx: number, key: keyof ImageItem, value: ImageItem[keyof ImageItem]) =>
     setForm((prev) => {
-      const copy = JSON.parse(JSON.stringify(prev));
+      const copy = JSON.parse(JSON.stringify(prev)) as Product;
+
+      if (!copy.images) {
+        copy.images = [];
+      }
+
       copy.images[idx] = { ...copy.images[idx], [key]: value };
-      if (key === "isPrimary" && value) {
-        copy.images = copy.images.map((im, i) => ({ ...im, isPrimary: i === idx }));
+      if (key === "isPrimary" && value === true) {
+        copy.images = copy.images.map((im: ImageItem, i: number) => ({ ...im, isPrimary: i === idx }));
       }
       return copy;
     });
 
-  const setField = (field: keyof Product, value: any) =>
+  const setField = <K extends keyof Product>(field: K, value: Product[K]) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
   // save (create/update)
   const handleSave = async () => {
     try {
       // prepare payload (convert some fields)
-      const payload = JSON.parse(JSON.stringify(form));
+      const payload = JSON.parse(JSON.stringify(form)) as Product;
 
-      payload.materialVariants = (payload.materialVariants || []).map((mv: any) => ({
+      payload.materialVariants = (payload.materialVariants || []).map((mv: MaterialVariant) => ({
         ...mv,
         weight: mv.weight !== undefined && mv.weight !== null ? Number(mv.weight) : undefined,
         price: mv.price !== undefined && mv.price !== null ? Number(mv.price) : undefined,
         compareAtPrice: mv.compareAtPrice ? Number(mv.compareAtPrice) : undefined,
         costPrice: mv.costPrice ? Number(mv.costPrice) : undefined,
         stock: mv.stock ? Number(mv.stock) : 0,
-        sizeVariants: (mv.sizeVariants || []).map((sv: any) => ({
+        sizeVariants: (mv.sizeVariants || []).map((sv: SizeVariant) => ({
           ...sv,
           stock: sv.stock ? Number(sv.stock) : 0,
           price: sv.price !== undefined && sv.price !== null ? Number(sv.price) : undefined,
@@ -282,7 +319,7 @@ export default function ProductsPage() {
       payload.tags = Array.isArray(payload.tags)
         ? payload.tags
         : typeof payload.tags === "string"
-        ? (payload.tags as string).split(",").map((t) => t.trim()).filter(Boolean)
+        ? payload.tags.split(",").map((t) => t.trim()).filter(Boolean)
         : [];
 
       payload.lowStockThreshold = payload.lowStockThreshold ? Number(payload.lowStockThreshold) : 5;
@@ -291,11 +328,11 @@ export default function ProductsPage() {
 
       if (!editing) {
         const res = await createProduct(payload);
-        const created = unwrap(res);
+        const created = unwrap(res) as Product;
         setProducts((prev) => [created, ...prev]);
       } else {
         const res = await updateProduct(editing._id!, payload);
-        const updated = unwrap(res);
+        const updated = unwrap(res) as Product;
         setProducts((prev) => prev.map((p) => (p._id === editing._id ? updated : p)));
       }
 
@@ -341,9 +378,7 @@ export default function ProductsPage() {
                 <tr key={p._id} className="border-t hover:bg-gray-50">
                   <td className="p-2 text-sm break-words max-w-[120px]">{p.name}</td>
                   <td className="p-2 text-sm break-words max-w-[100px]">
-                    {typeof p.category === "object"
-                      ? p.category?.name || p.category?.slug || "—"
-                      : p.category || "—"}
+                    {getCategoryLabel(p.category)}
                   </td>
                   <td className="p-2 text-sm">
                     {p.materialVariants?.length
@@ -365,7 +400,7 @@ export default function ProductsPage() {
           {products.map((p) => (
             <div key={p._id} className="border p-3 rounded-lg text-sm bg-white">
               <p><strong>Name:</strong> {p.name}</p>
-              <p><strong>Category:</strong> {p.category?.name || p.category || "—"}</p>
+              <p><strong>Category:</strong> {getCategoryLabel(p.category)}</p>
               <p><strong>Price:</strong> {p.materialVariants?.[0]?.price || "—"}</p>
               <p><strong>Active:</strong> {p.isActive ? "Yes" : "No"}</p>
               <div className="flex justify-end gap-2 mt-2">
@@ -418,7 +453,7 @@ export default function ProductsPage() {
 
                   <div>
                     <Label>Category</Label>
-                    <select className="w-full border rounded-md p-2" value={form.category || ""} onChange={(e) => setField("category", e.target.value)}>
+                    <select className="w-full border rounded-md p-2" value={getRefValue(form.category)} onChange={(e) => setField("category", e.target.value)}>
                       <option value="">Select category</option>
                       {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
                     </select>
@@ -426,7 +461,7 @@ export default function ProductsPage() {
 
                   <div>
                     <Label>Subcategory</Label>
-                    <select className="w-full border rounded-md p-2" value={form.subCategory || ""} onChange={(e) => setField("subCategory", e.target.value)}>
+                    <select className="w-full border rounded-md p-2" value={getRefValue(form.subCategory)} onChange={(e) => setField("subCategory", e.target.value)}>
                       <option value="">Select subcategory</option>
                       {subCategories.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
                     </select>
@@ -434,7 +469,7 @@ export default function ProductsPage() {
 
                   <div>
                     <Label>Tags (comma separated)</Label>
-                    <Input value={(form.tags || []).join(", ")} onChange={(e) => setField("tags", e.target.value)} />
+                    <Input value={Array.isArray(form.tags) ? form.tags.join(", ") : form.tags || ""} onChange={(e) => setField("tags", e.target.value)} />
                   </div>
 
                   <div className="flex items-center gap-4">
