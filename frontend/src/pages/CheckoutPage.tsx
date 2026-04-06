@@ -1,9 +1,10 @@
 // CheckoutPage.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Leaf, CreditCard, Truck, MapPin, Phone, Mail, User } from 'lucide-react';
 import { getApiErrorMessage } from '../lib/api';
 import { useCartSummary, useCreateOrderMutation } from '../hooks/useStoreData';
+import { trackClientEvent } from '../lib/analytics';
 
 interface ShippingAddress {
   name: string;
@@ -41,6 +42,7 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const createOrderMutation = useCreateOrderMutation();
   const { items, subtotal, isPending: loading } = useCartSummary();
+  const trackedCheckoutStartRef = useRef("");
 
   const protectionPrice = 493.45;
   const shippingCost = 0; // Free shipping
@@ -52,6 +54,28 @@ export default function CheckoutPage() {
       navigate('/cart');
     }
   }, [items, loading, navigate]);
+
+  useEffect(() => {
+    if (loading || items.length === 0) {
+      return;
+    }
+
+    const trackingKey = `${items.length}:${subtotal}`;
+
+    if (trackedCheckoutStartRef.current === trackingKey) {
+      return;
+    }
+
+    trackedCheckoutStartRef.current = trackingKey;
+
+    trackClientEvent({
+      eventType: "checkout_started",
+      metadata: {
+        itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+        subtotal,
+      },
+    });
+  }, [items, loading, subtotal]);
 
   const tax = subtotal * taxRate;
   const total = subtotal + (packageProtection ? protectionPrice : 0) + shippingCost + tax;

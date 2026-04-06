@@ -1,5 +1,6 @@
 import Cart from '../models/cart.model.js';
 import Product from '../models/product.model.js';
+import { trackEvent } from '../utils/trackEvent.js';
 
 const prepareCart = async (cart) => {
   await cart.populate({
@@ -98,6 +99,19 @@ export const addToCart = async (req, res) => {
     }
     await prepareCart(cart);
     await cart.save();
+    await trackEvent({
+      eventType: 'add_to_cart',
+      req,
+      userId: req.user?._id || null,
+      sessionId: req.body.sessionId || '',
+      productId: product._id,
+      metadata: {
+        quantity,
+        size,
+        material,
+        price,
+      },
+    });
     sendCartResponse(cart, res);
 
   } catch (error) {

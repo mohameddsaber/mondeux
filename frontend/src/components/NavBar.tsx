@@ -1,6 +1,7 @@
 import { FaTimes } from "react-icons/fa";
 import { Menu, Search, ShoppingBag } from 'lucide-react';
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import ShoppingCartPanel from "./CartPanel";
 import { useCartSummary } from "../hooks/useStoreData";
@@ -8,7 +9,19 @@ import { useCartSummary } from "../hooks/useStoreData";
 function NavBar() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [searchValue, setSearchValue] = useState("");
   const { totalItems: cartItemCount } = useCartSummary();
+  const navigate = useNavigate();
+
+  const submitSearch = () => {
+    const query = searchValue.trim();
+
+    if (!query) {
+      return;
+    }
+
+    navigate(`/products?q=${encodeURIComponent(query)}&title=SEARCH%20RESULTS`);
+  };
 
   return (
     <>
@@ -46,10 +59,17 @@ function NavBar() {
                 <input
                   type="text"
                   placeholder="Search..."
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      submitSearch();
+                    }
+                  }}
                   className="w-full h-[30px] px-2 border border-gray-300 rounded bg-gray-100 outline-none"
                 />
               </div>
-              <Search className="cursor-pointer" />
+              <Search className="cursor-pointer" onClick={submitSearch} />
             </div>
             <div className="relative">
               <button 

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { generateTokenAndSetCookie } from '../utils/generateToken.js';
 import { protect, admin } from '../middleware/auth.js';
 import { appConfig } from '../config/env.js';
+import { trackEvent } from '../utils/trackEvent.js';
 
 
 export const isAuthenticated = [
@@ -29,6 +30,15 @@ export const register = async (req, res) => {
 
     const userExists = await User.findOne({ email });
     if (userExists) {
+      await trackEvent({
+        eventType: 'signup_failure',
+        req,
+        sessionId: req.body.sessionId || '',
+        metadata: {
+          reason: 'email_already_exists',
+        },
+      });
+
       return res.status(400).json({
         success: false,
         message: "User already exists with this email",
@@ -38,6 +48,16 @@ export const register = async (req, res) => {
     const user = await User.create({ name, email, password, phone });
 
     generateTokenAndSetCookie(user._id, res);
+
+    await trackEvent({
+      eventType: 'signup_success',
+      req,
+      userId: user._id,
+      sessionId: req.body.sessionId || '',
+      metadata: {
+        role: user.role,
+      },
+    });
 
     res.status(201).json({
       success: true,
@@ -61,6 +81,15 @@ export const login = async (req, res) => {
 
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
+      await trackEvent({
+        eventType: 'login_failure',
+        req,
+        sessionId: req.body.sessionId || '',
+        metadata: {
+          reason: 'invalid_credentials',
+        },
+      });
+
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
@@ -69,6 +98,15 @@ export const login = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      await trackEvent({
+        eventType: 'login_failure',
+        req,
+        sessionId: req.body.sessionId || '',
+        metadata: {
+          reason: 'invalid_credentials',
+        },
+      });
+
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
@@ -76,6 +114,16 @@ export const login = async (req, res) => {
     }
 
     generateTokenAndSetCookie(user._id, res);
+
+    await trackEvent({
+      eventType: 'login_success',
+      req,
+      userId: user._id,
+      sessionId: req.body.sessionId || '',
+      metadata: {
+        role: user.role,
+      },
+    });
 
     res.json({
       success: true,

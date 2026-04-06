@@ -3,13 +3,25 @@ import { useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import ShoppingCartPanel from './CartPanel';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCartSummary } from '../hooks/useStoreData';
 
 function Header() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [searchValue, setSearchValue] = useState("");
   const { totalItems: cartItemCount } = useCartSummary();
+  const navigate = useNavigate();
+
+  const submitSearch = () => {
+    const query = searchValue.trim();
+
+    if (!query) {
+      return;
+    }
+
+    navigate(`/products?q=${encodeURIComponent(query)}&title=SEARCH%20RESULTS`);
+  };
 
   return (
     <>
@@ -44,10 +56,17 @@ function Header() {
                   <input
                     type="text"
                     placeholder="Search..."
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        submitSearch();
+                      }
+                    }}
                     className="w-full h-[30px] px-2 border border-gray-300 rounded bg-gray-100 outline-none"
                   />
                 </div>
-                <Search className="cursor-pointer" />
+                <Search className="cursor-pointer" onClick={submitSearch} />
               </div>
               
               <button 

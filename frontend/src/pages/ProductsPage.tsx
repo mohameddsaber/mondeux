@@ -1,10 +1,11 @@
 import ProductCard, { type Product } from "../components/ProductCard.tsx";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import FilterSidebar from "../components/FilterSidebar.tsx"
 import { Plus, Minus } from "lucide-react";
 import { Link,useLocation } from "react-router-dom";
 import { getApiErrorMessage } from "../lib/api";
 import { useProductsQuery } from "../hooks/useStoreData";
+import { trackClientEvent } from "../lib/analytics";
 
 
 
@@ -18,15 +19,21 @@ const ProductsPage: React.FC = () => {
     );
   };
 const [sortBy, setSortBy] = useState<string>("best-selling");
-    const [title,setTitle] = useState<string>();
+  const [title,setTitle] = useState<string>();
+  const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
+  const trackedSearchKeyRef = useRef("");
   
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const sortParam = params.get("sort") || "best-selling";
-    const titleParams=params.get("title")||"SHOP ALL";
+    const queryParam = params.get("q") || "";
+    const titleParams =
+      params.get("title") ||
+      (queryParam ? `SEARCH RESULTS FOR "${queryParam.toUpperCase()}"` : "SHOP ALL");
 
     setSortBy(sortParam);
+    setSearchQuery(queryParam);
     setTitle(titleParams);
   }, [location.search]);
 
@@ -46,12 +53,35 @@ const [sortBy, setSortBy] = useState<string>("best-selling");
   };
 
 
-  const productsQuery = useProductsQuery(sortBy);
+  const productsQuery = useProductsQuery(sortBy, searchQuery);
   const products: Product[] = productsQuery.data?.data || [];
   const loading = productsQuery.isPending;
   const error = productsQuery.error
     ? getApiErrorMessage(productsQuery.error, "Failed to fetch products")
     : null;
+
+  useEffect(() => {
+    if (!searchQuery || loading || error) {
+      return;
+    }
+
+    const trackingKey = `${searchQuery}:${products.length}`;
+
+    if (trackedSearchKeyRef.current === trackingKey) {
+      return;
+    }
+
+    trackedSearchKeyRef.current = trackingKey;
+
+    trackClientEvent({
+      eventType: "search",
+      metadata: {
+        query: searchQuery,
+        resultCount: products.length,
+        sortBy,
+      },
+    });
+  }, [error, loading, products.length, searchQuery, sortBy]);
 
 
   return (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronDown} from 'lucide-react';
 import ProductImageSlider from '../components/ProductImageSlider.tsx';
@@ -7,6 +7,7 @@ import RelatedProducts from '../components/RelatedProducts.tsx';
 import TrustBadges from '../components/TrustBadges.tsx';
 import { getApiErrorMessage } from '../lib/api';
 import { useAddToCartMutation, useProductDetailQuery } from '../hooks/useStoreData';
+import { trackClientEvent } from '../lib/analytics';
 
 
 export interface SizeVariant {
@@ -61,6 +62,7 @@ const ProductItemPage: React.FC = () => {
   const [addedToCart, setAddedToCart] = useState(false);
   const quantity = 1;
   const addToCartMutation = useAddToCartMutation();
+  const trackedProductViewRef = useRef("");
   
   const productQuery = useProductDetailQuery(slug || "");
   const product = (productQuery.data?.data as ProductDetails | undefined) ?? null;
@@ -90,6 +92,28 @@ const ProductItemPage: React.FC = () => {
         initialMaterial.sizeVariants[0];
       setSelectedSize(initialSize);
     }
+  }, [product]);
+
+  useEffect(() => {
+    if (!product) {
+      return;
+    }
+
+    if (trackedProductViewRef.current === product._id) {
+      return;
+    }
+
+    trackedProductViewRef.current = product._id;
+
+    trackClientEvent({
+      eventType: "product_view",
+      productId: product._id,
+      metadata: {
+        slug: product.slug,
+        category: product.category?.slug || "",
+        subCategory: product.subCategory?.slug || "",
+      },
+    });
   }, [product]);
 
 

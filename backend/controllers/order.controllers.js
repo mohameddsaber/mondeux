@@ -2,6 +2,7 @@ import Order from '../models/order.model.js';
 import Cart from '../models/cart.model.js';
 import Product from '../models/product.model.js';
 import Sale from '../models/sales.model.js';
+import { trackEvent } from '../utils/trackEvent.js';
 
 export const getMyOrders = async (req, res) => {
   try {
@@ -179,6 +180,23 @@ export const createOrder = async (req, res) => {
     cart.items = [];
     cart.totalAmount = 0;
     await cart.save();
+
+    await trackEvent({
+      eventType: 'checkout_completed',
+      req,
+      userId: req.user?._id || null,
+      sessionId: req.body.sessionId || '',
+      orderId: order._id,
+      metadata: {
+        orderNumber,
+        paymentMethod,
+        totalAmount,
+        subtotal,
+        shippingCost,
+        tax,
+        itemCount: orderItems.reduce((sum, item) => sum + item.quantity, 0),
+      },
+    });
 
     res.status(201).json({
       success: true,

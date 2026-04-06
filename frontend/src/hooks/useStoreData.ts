@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import type { Product as CatalogProduct } from "@/components/ProductCard";
 import { apiRequest } from "@/lib/api";
+import { getAnalyticsSessionId } from "@/lib/analytics";
 import { queryKeys } from "@/lib/queryKeys";
 
 export interface SessionUser {
@@ -257,7 +258,15 @@ const getSortQueryValue = (sortBy: string) => {
   return sortBy;
 };
 
-const getProductsPath = (sortBy: string, limit = 20) => {
+const getProductsPath = (sortBy: string, limit = 20, searchQuery = "") => {
+  if (searchQuery.trim()) {
+    const params = new URLSearchParams({
+      q: searchQuery.trim(),
+      limit: String(limit),
+    });
+    return `/products/search?${params.toString()}`;
+  }
+
   if (sortBy === "featured") {
     return `/products/featured?limit=${limit}`;
   }
@@ -333,7 +342,10 @@ export const useLoginMutation = () => {
     mutationFn: (payload: AuthPayload) =>
       apiRequest<AuthResponse>("/users/login", {
         method: "POST",
-        json: payload,
+        json: {
+          ...payload,
+          sessionId: getAnalyticsSessionId(),
+        },
       }),
     onSuccess: async () => {
       await Promise.all([
@@ -353,7 +365,10 @@ export const useRegisterMutation = () => {
     mutationFn: (payload: RegisterPayload) =>
       apiRequest<AuthResponse>("/users/register", {
         method: "POST",
-        json: payload,
+        json: {
+          ...payload,
+          sessionId: getAnalyticsSessionId(),
+        },
       }),
     onSuccess: async () => {
       await Promise.all([
@@ -437,7 +452,10 @@ export const useAddToCartMutation = () => {
     }) =>
       apiRequest("/cart/items", {
         method: "POST",
-        json: payload,
+        json: {
+          ...payload,
+          sessionId: getAnalyticsSessionId(),
+        },
       }),
     onSuccess: async () => {
       await invalidateCartQueries(queryClient);
@@ -493,10 +511,11 @@ export const useRemoveFromCartMutation = () => {
   });
 };
 
-export const useProductsQuery = (sortBy: string) =>
+export const useProductsQuery = (sortBy: string, searchQuery = "") =>
   useQuery({
-    queryKey: queryKeys.products.list("all", { sortBy }),
-    queryFn: () => apiRequest<ProductListResponse>(getProductsPath(sortBy)),
+    queryKey: queryKeys.products.list("all", { sortBy, searchQuery }),
+    queryFn: () =>
+      apiRequest<ProductListResponse>(getProductsPath(sortBy, 20, searchQuery)),
     placeholderData: keepPreviousData,
   });
 
@@ -572,7 +591,10 @@ export const useCreateOrderMutation = () => {
     mutationFn: (payload: CreateOrderInput) =>
       apiRequest<OrderDetailResponse>("/orders", {
         method: "POST",
-        json: payload,
+        json: {
+          ...payload,
+          sessionId: getAnalyticsSessionId(),
+        },
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({

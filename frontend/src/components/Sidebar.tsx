@@ -1,6 +1,6 @@
 import {  Search, Plus } from 'lucide-react';
 import {  useState } from "react";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getApiErrorMessage } from '../lib/api';
 import { useLogoutMutation } from '../hooks/useStoreData';
 
@@ -13,6 +13,7 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [searchValue, setSearchValue] = useState<string>("");
   const [expandedMenus, setExpandedMenus] = useState<{[key: string]: boolean}>({});
   const logoutMutation = useLogoutMutation();
+  const navigate = useNavigate();
   
   const baseText = "font-bold font-[Karla] tracking-wider text-[12px] text-[#121212]";
   const itemPadding = "pb-4";
@@ -41,6 +42,17 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
     console.error("Error logging out:", getApiErrorMessage(error, "Logout failed"));
   }
 };
+
+  const submitSearch = () => {
+    const query = searchValue.trim();
+
+    if (!query) {
+      return;
+    }
+
+    onClose();
+    navigate(`/products?q=${encodeURIComponent(query)}&title=SEARCH%20RESULTS`);
+  };
 
 
 
@@ -78,9 +90,14 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
               placeholder="SEARCH"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  submitSearch();
+                }
+              }}
               className="flex-1 outline-none text-[12px] font-[Karla] font-bold tracking-wider placeholder-black"
             />
-            <Search className="w-6 h-6 cursor-pointer" />
+            <Search className="w-6 h-6 cursor-pointer" onClick={submitSearch} />
           </div>
         </div>
 

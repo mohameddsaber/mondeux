@@ -2,6 +2,7 @@ import express from 'express';
 import { createRateLimiter } from '../middleware/rateLimit.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import { loginSchema, registerSchema } from '../validation/requestSchemas.js';
+import { attachUserIfPresent } from '../middleware/auth.js';
 import {
   register,
   login,
@@ -30,8 +31,8 @@ const authRateLimit = createRateLimiter({
 });
 
 // Public routes
-router.post('/register', authRateLimit, validateRequest(registerSchema), register);
-router.post('/login', authRateLimit, validateRequest(loginSchema), login);
+router.post('/register', attachUserIfPresent, authRateLimit, validateRequest(registerSchema), register);
+router.post('/login', attachUserIfPresent, authRateLimit, validateRequest(loginSchema), login);
 
 
 

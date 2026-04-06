@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id format');
 const optionalTrimmedString = z.string().trim().optional();
+const optionalSessionIdSchema = z.string().trim().min(1).max(128).optional();
 const optionalNullableNumber = z.coerce.number().min(0).nullable().optional();
 
 const emptyRequestSchema = z.object({
@@ -14,6 +15,17 @@ const materialEnum = z.enum(['gold', 'silver', 'stainless steel']);
 const paymentMethodEnum = z.enum(['card', 'cash_on_delivery']);
 const orderStatusEnum = z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']);
 const paymentStatusEnum = z.enum(['pending', 'paid', 'failed', 'refunded']);
+const analyticsEventTypeEnum = z.enum([
+  'product_view',
+  'search',
+  'add_to_cart',
+  'checkout_started',
+  'checkout_completed',
+  'login_success',
+  'login_failure',
+  'signup_success',
+  'signup_failure',
+]);
 
 const sizeVariantSchema = z.object({
   label: z.string().trim().min(1, 'Size label is required'),
@@ -62,6 +74,7 @@ export const registerSchema = z.object({
     email: z.string().trim().email('Email must be valid'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
     phone: optionalTrimmedString,
+    sessionId: optionalSessionIdSchema,
   }),
   params: z.object({}),
   query: z.object({}),
@@ -71,6 +84,7 @@ export const loginSchema = z.object({
   body: z.object({
     email: z.string().trim().email('Email must be valid'),
     password: z.string().min(1, 'Password is required'),
+    sessionId: optionalSessionIdSchema,
   }),
   params: z.object({}),
   query: z.object({}),
@@ -82,6 +96,7 @@ export const addToCartSchema = z.object({
     quantity: z.coerce.number().int().min(1).default(1),
     size: z.string().trim().min(1, 'Size is required'),
     material: z.string().trim().min(1, 'Material is required'),
+    sessionId: optionalSessionIdSchema,
   }),
   params: z.object({}),
   query: z.object({}),
@@ -119,6 +134,7 @@ export const createOrderSchema = z.object({
     shippingCost: z.coerce.number().min(0).optional().default(0),
     tax: z.coerce.number().min(0).optional().default(0),
     customerNotes: z.string().optional().default(''),
+    sessionId: optionalSessionIdSchema,
   }),
   params: z.object({}),
   query: z.object({}),
@@ -199,6 +215,19 @@ export const updateProductSchema = z.object({
   params: z.object({
     id: objectIdSchema,
   }),
+  query: z.object({}),
+});
+
+export const ingestEventSchema = z.object({
+  body: z.object({
+    eventType: analyticsEventTypeEnum,
+    sessionId: z.string().trim().min(1).max(128),
+    productId: objectIdSchema.optional(),
+    orderId: objectIdSchema.optional(),
+    metadata: z.record(z.string(), z.unknown()).optional().default({}),
+    occurredAt: z.coerce.date().optional(),
+  }),
+  params: z.object({}),
   query: z.object({}),
 });
 
