@@ -18,7 +18,7 @@ const getComparableProductPrice = (product) => {
     return minVariantPrice;
   }
 
-  const prices = (product?.materialVariants || [])
+  const prices = (product?.variants || [])
     .map((variant) => Number(variant?.price || 0))
     .filter((price) => price > 0);
 
@@ -47,7 +47,7 @@ const serializeWishlistProducts = (products, snapshots = []) => {
       isActive: Boolean(product.isActive),
       category: product.category || null,
       subCategory: product.subCategory || null,
-      materialVariants: product.materialVariants || [],
+      variants: product.variants || [],
       minVariantPrice: currentPrice,
       totalStock,
       lowStockThreshold,
@@ -66,7 +66,7 @@ const populateWishlistProducts = (userQuery) =>
     path: 'wishlist',
     select: `
       name slug images rating isActive category subCategory
-      materialVariants minVariantPrice totalStock lowStockThreshold
+      variants minVariantPrice totalStock lowStockThreshold
     `,
     populate: {
       path: 'category subCategory',
@@ -318,7 +318,7 @@ export const addToWishlist = async (req, res) => {
       Product.findById(req.params.productId)
         .select(`
           name slug images rating isActive category subCategory
-          materialVariants minVariantPrice totalStock lowStockThreshold
+          variants minVariantPrice totalStock lowStockThreshold
         `)
         .populate('category subCategory', 'name slug'),
     ]);

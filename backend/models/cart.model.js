@@ -18,10 +18,9 @@ const cartSchema = new mongoose.Schema({
       trim: true
     },
     
-    material: {
-      type: String,
-      required: true,
-      trim: true
+    selectedAttribute: {
+      type: { type: String, required: true },
+      value: { type: String, required: true },
     },
     quantity: {
       type: Number,

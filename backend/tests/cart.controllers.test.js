@@ -25,7 +25,7 @@ test('getCart returns the populated cart and recalculates total amount', async (
         quantity: 2,
         price: 150,
         size: 'M',
-        material: 'gold',
+        selectedAttribute: { type: 'material', value: 'gold' },
       },
     ],
     totalAmount: 0,
@@ -64,7 +64,7 @@ test('updateCartItem increments quantity, refreshes price, and recalculates tota
         quantity: 1,
         price: 100,
         size: 'M',
-        material: 'gold',
+        selectedAttribute: { type: 'material', value: 'gold' },
       },
     ],
     totalAmount: 100,
@@ -87,9 +87,9 @@ test('updateCartItem increments quantity, refreshes price, and recalculates tota
   stubs.stub(Product, 'findById', async () => ({
     _id: 'product-1',
     isActive: true,
-    materialVariants: [
+    variants: [
       {
-        material: 'gold',
+        attribute: { type: 'material', value: 'gold' },
         price: 150,
         sizeVariants: [{ label: 'M', stock: 3 }],
       },

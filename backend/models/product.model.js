@@ -7,6 +7,20 @@ const productSchema = new mongoose.Schema({
   description: { type: String, required: true },
   images: [{ url: String, alt: String, isPrimary: Boolean }],
 
+  productType: {
+    type: String,
+    enum: ['jewellery', 'clothing', 'accessories', 'bags'],
+    default: 'jewellery'
+  },
+  gender: {
+    type: String,
+    enum: ['men', 'women', 'unisex', 'kids', 'unspecified'],
+    default: 'unspecified'
+  },
+  extraAttributes: {
+    type: Map,
+    of: String
+  },
 
   category: {
     type: mongoose.Schema.Types.ObjectId,
@@ -19,15 +33,14 @@ const productSchema = new mongoose.Schema({
     required: true
   },
 
-  materialVariants: [
+  variants: [
     {
-      material: {
-        type: String,
-        enum: ['gold', 'silver', 'stainless steel'],
-        required: true
+      attribute: {
+        type: { type: String, required: true },
+        value: { type: String, required: true },
+        meta: String
       },
-      metalPurity: String, 
-      weight: Number,
+      images: [{ url: String, alt: String, isPrimary: Boolean }],
       price: { type: Number, required: true, min: 0 },
       compareAtPrice: Number,
       costPrice: Number,
@@ -52,7 +65,7 @@ const productSchema = new mongoose.Schema({
   lowStockThreshold: { type: Number, default: 5 },
   minVariantPrice: { type: Number, default: 0, min: 0, index: true },
   totalStock: { type: Number, default: 0, min: 0, index: true },
-  availableMaterials: [{ type: String, enum: ['gold', 'silver', 'stainless steel'] }],
+  availableAttributes: [{ type: String }],
 
   metaTitle: String,
   metaDescription: String,
@@ -78,39 +91,39 @@ productSchema.index({ isActive: 1, subCategory: 1, numReviews: -1, rating: -1, c
 productSchema.index({ isActive: 1, category: 1, isFeatured: -1, createdAt: -1 });
 productSchema.index({ isActive: 1, subCategory: 1, isFeatured: -1, createdAt: -1 });
 
-productSchema.index({ 'materialVariants.material': 1 });
-productSchema.index({ availableMaterials: 1, isActive: 1 });
+productSchema.index({ 'variants.attribute.value': 1 });
+productSchema.index({ availableAttributes: 1, isActive: 1 });
 productSchema.index({ isFeatured: 1, isActive: 1 });
 productSchema.index({ name: 'text', description: 'text', tags: 'text' });
 
 productSchema.pre('save', function(next) {
-  applyDerivedProductFields(this, this.materialVariants);
+  applyDerivedProductFields(this, this.variants);
   next();
 });
 
 productSchema.pre('findOneAndUpdate', function(next) {
   const update = this.getUpdate() || {};
-  const materialVariants =
-    update.materialVariants
-    || update.$set?.materialVariants
+  const variants =
+    update.variants
+    || update.$set?.variants
     || null;
 
-  if (!materialVariants) {
+  if (!variants) {
     return next();
   }
 
-  const derivedFields = computeProductDerivedFields(materialVariants);
+  const derivedFields = computeProductDerivedFields(variants);
   const nextUpdate = { ...update };
   nextUpdate.$set = {
     ...(update.$set || {}),
     minVariantPrice: derivedFields.minVariantPrice,
     totalStock: derivedFields.totalStock,
-    availableMaterials: derivedFields.availableMaterials,
+    availableAttributes: derivedFields.availableAttributes,
   };
 
-  if ('materialVariants' in nextUpdate) {
-    delete nextUpdate.materialVariants;
-    nextUpdate.$set.materialVariants = materialVariants;
+  if ('variants' in nextUpdate) {
+    delete nextUpdate.variants;
+    nextUpdate.$set.variants = variants;
   }
 
   this.setUpdate(nextUpdate);

@@ -46,21 +46,24 @@ const sizeVariantSchema = z.object({
   isAvailable: z.boolean().optional(),
 });
 
-const materialVariantSchema = z.object({
-  material: materialEnum,
-  metalPurity: optionalTrimmedString,
-  weight: optionalNullableNumber,
+const imageSchema = z.object({
+  url: z.string().trim().url('Image URL must be valid'),
+  alt: optionalTrimmedString,
+  isPrimary: z.boolean().optional(),
+});
+
+const variantSchema = z.object({
+  attribute: z.object({
+    type: z.string().trim().min(1, 'Attribute type is required'),
+    value: z.string().trim().min(1, 'Attribute value is required'),
+    meta: optionalTrimmedString,
+  }),
+  images: z.array(imageSchema).default([]),
   price: z.coerce.number().min(0, 'Price must be 0 or greater'),
   compareAtPrice: optionalNullableNumber,
   costPrice: optionalNullableNumber,
   stock: z.coerce.number().int().min(0).optional(),
   sizeVariants: z.array(sizeVariantSchema).min(1, 'At least one size variant is required'),
-});
-
-const imageSchema = z.object({
-  url: z.string().trim().url('Image URL must be valid'),
-  alt: optionalTrimmedString,
-  isPrimary: z.boolean().optional(),
 });
 
 const shippingAddressSchema = z.object({
@@ -243,9 +246,12 @@ export const createProductSchema = z.object({
     slug: z.string().trim().min(1, 'Slug is required'),
     description: z.string().trim().min(1, 'Description is required'),
     images: z.array(imageSchema).default([]),
+    productType: z.enum(['jewellery', 'clothing', 'accessories', 'bags']).optional().default('jewellery'),
+    gender: z.enum(['men', 'women', 'unisex', 'kids', 'unspecified']).optional().default('unspecified'),
+    extraAttributes: z.record(z.string(), z.string()).optional().default({}),
     category: objectIdSchema,
     subCategory: objectIdSchema,
-    materialVariants: z.array(materialVariantSchema).min(1, 'At least one material variant is required'),
+    variants: z.array(variantSchema).min(1, 'At least one variant is required'),
     tags: z.array(z.string().trim()).optional().default([]),
     isActive: z.boolean().optional(),
     isFeatured: z.boolean().optional(),

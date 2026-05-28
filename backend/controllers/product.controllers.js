@@ -158,10 +158,10 @@ const createFacetPipeline = ({
 }) => {
   const facets = {
     materials: [
-      { $unwind: '$availableMaterials' },
+      { $unwind: '$availableAttributes' },
       {
         $group: {
-          _id: '$availableMaterials',
+          _id: '$availableAttributes',
           count: { $sum: 1 },
         },
       },
@@ -387,7 +387,7 @@ const getCatalogPayload = async ({
   }
 
   if (selectedMaterials.length > 0) {
-    baseMatch['materialVariants.material'] = {
+    baseMatch['variants.attribute.value'] = {
       $in: selectedMaterials,
     };
   }
@@ -634,7 +634,7 @@ export const getProductBySlug = async (req, res) => {
       isActive: true,
     })
       .limit(4)
-      .select('name slug images rating minVariantPrice materialVariants');
+      .select('name slug images rating minVariantPrice variants');
 
     res.json({
       success: true,

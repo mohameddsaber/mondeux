@@ -22,9 +22,9 @@ const orderSchema = new mongoose.Schema({
       type: String,
       required: true
     },
-    material: {
-      type: String,
-      required: true
+    selectedAttribute: {
+      type: { type: String, required: true },
+      value: { type: String, required: true },
     },
     quantity: {
       type: Number,

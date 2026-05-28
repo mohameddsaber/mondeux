@@ -11,11 +11,11 @@ const resyncProducts = async () => {
   let updatedCount = 0;
 
   for await (const product of cursor) {
-    const derivedFields = computeProductDerivedFields(product.materialVariants);
+    const derivedFields = computeProductDerivedFields(product.variants);
 
     product.minVariantPrice = derivedFields.minVariantPrice;
     product.totalStock = derivedFields.totalStock;
-    product.availableMaterials = derivedFields.availableMaterials;
+    product.availableAttributes = derivedFields.availableAttributes;
 
     if (!product.isModified()) {
       continue;

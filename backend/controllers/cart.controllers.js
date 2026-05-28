@@ -79,10 +79,11 @@ export const addToCart = async (req, res) => {
     const existingItemIndex = cart.items.findIndex(item => 
       item.product.toString() === productId && 
       item.size === size &&
-      item.material === material
+      item.selectedAttribute?.value === material
     );
 
-    const price = product.materialVariants.find(mv => mv.material === material)?.price || product.price;
+    const variant = product.variants.find(mv => mv.attribute?.value === material);
+    const price = variant?.price || product.price;
 
     if (existingItemIndex > -1) {
 
@@ -94,7 +95,7 @@ export const addToCart = async (req, res) => {
         quantity,
         price, 
         size,
-        material
+        selectedAttribute: { type: 'material', value: material }
       });
     }
     await prepareCart(cart);
@@ -140,7 +141,7 @@ export const updateCartItem = async (req, res) => {
     const itemIndex = cart.items.findIndex(
       item => item.product.toString() === productId &&
               item.size === size &&
-              item.material === material
+              item.selectedAttribute?.value === material
     );
 
     if (itemIndex === -1) {
@@ -159,10 +160,10 @@ export const updateCartItem = async (req, res) => {
 
           cart.items = cart.items.filter((_, index) => index !== itemIndex);
         } else {
-            const materialVariant = product.materialVariants.find(mv => mv.material === material);
-            const sizeVariant = materialVariant?.sizeVariants.find(sv => sv.label === size);
+            const variant = product.variants.find(mv => mv.attribute?.value === material);
+            const sizeVariant = variant?.sizeVariants.find(sv => sv.label === size);
 
-            if (!materialVariant || !sizeVariant) {
+            if (!variant || !sizeVariant) {
 
               cart.items = cart.items.filter((_, index) => index !== itemIndex);
             }
@@ -174,7 +175,7 @@ export const updateCartItem = async (req, res) => {
             } else {
 
               cart.items[itemIndex].quantity = newQuantity;
-                cart.items[itemIndex].price = materialVariant.price; 
+                cart.items[itemIndex].price = variant.price; 
             }
         }
     }
@@ -205,7 +206,7 @@ export const removeFromCart = async (req, res) => {
         !(
           item.product.toString() === productId &&
           item.size === size &&
-          item.material === material
+          item.selectedAttribute?.value === material
         )
     );
 

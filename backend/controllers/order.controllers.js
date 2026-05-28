@@ -29,20 +29,20 @@ const buildOrderItemsFromCart = async (cart) => {
       };
     }
 
-    const materialVariant = product.materialVariants.find(
-      (mv) => mv.material === item.material
+    const variant = product.variants.find(
+      (mv) => mv.attribute?.value === item.selectedAttribute?.value
     );
 
-    if (!materialVariant) {
+    if (!variant) {
       return {
         error: {
           success: false,
-          message: `Material variant "${item.material}" not found for ${product.name}`,
+          message: `Variant "${item.selectedAttribute?.value}" not found for ${product.name}`,
         },
       };
     }
 
-    const sizeVariant = materialVariant.sizeVariants.find(
+    const sizeVariant = variant.sizeVariants.find(
       (sv) => sv.label === item.size
     );
 
@@ -50,7 +50,7 @@ const buildOrderItemsFromCart = async (cart) => {
       return {
         error: {
           success: false,
-          message: `Size "${item.size}" not found for ${product.name} in ${item.material}`,
+          message: `Size "${item.size}" not found for ${product.name} in ${item.selectedAttribute?.value}`,
         },
       };
     }
@@ -59,7 +59,7 @@ const buildOrderItemsFromCart = async (cart) => {
       return {
         error: {
           success: false,
-          message: `Insufficient stock for ${product.name} (${item.material} - ${item.size}). Only ${sizeVariant.stock} available.`,
+          message: `Insufficient stock for ${product.name} (${item.selectedAttribute?.value} - ${item.size}). Only ${sizeVariant.stock} available.`,
         },
       };
     }
@@ -67,13 +67,13 @@ const buildOrderItemsFromCart = async (cart) => {
     orderItems.push({
       productDoc: product,
       cartItem: item,
-      materialVariant,
+      variant,
       sizeVariant,
       payload: {
         product: product._id,
         name: product.name,
         size: item.size,
-        material: item.material,
+        selectedAttribute: item.selectedAttribute,
         quantity: item.quantity,
         price: item.price,
         image: product.images?.[0]?.url || '',
@@ -121,7 +121,7 @@ export const getMyOrders = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(skip)
-      .populate('items.product', 'name slug materialVariants')
+      .populate('items.product', 'name slug variants')
       .select('-__v');
 
     const total = await Order.countDocuments({ user: req.user._id });
@@ -144,7 +144,7 @@ export const getMyOrders = async (req, res) => {
 export const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate('items.product', 'name slug materialVariants');
+      .populate('items.product', 'name slug variants');
 
     if (!order) {
       return res.status(404).json({
@@ -217,7 +217,7 @@ export const createOrder = async (req, res) => {
     for (const item of stockCheckedItems) {
       item.sizeVariant.stock -= item.cartItem.quantity;
 
-      item.materialVariant.stock = item.materialVariant.sizeVariants.reduce(
+      item.variant.stock = item.variant.sizeVariants.reduce(
         (total, sizeVariant) => total + sizeVariant.stock,
         0
       );
@@ -352,12 +352,12 @@ export const cancelOrder = async (req, res) => {
       const product = await Product.findById(item.product);
       
       if (product) {
-        const materialVariant = product.materialVariants.find(
-          mv => mv.material === item.material
+        const variant = product.variants.find(
+          mv => mv.attribute?.value === item.selectedAttribute?.value
         );
 
-        if (materialVariant) {
-          const sizeVariant = materialVariant.sizeVariants.find(
+        if (variant) {
+          const sizeVariant = variant.sizeVariants.find(
             sv => sv.label === item.size
           );
 
@@ -365,7 +365,7 @@ export const cancelOrder = async (req, res) => {
 
             sizeVariant.stock += item.quantity;
             
-            materialVariant.stock = materialVariant.sizeVariants.reduce(
+            variant.stock = variant.sizeVariants.reduce(
               (total, sv) => total + sv.stock,
               0
             );

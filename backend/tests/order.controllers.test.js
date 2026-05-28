@@ -24,17 +24,17 @@ test('createOrder converts the cart into an order, decrements stock, and clears 
     name: 'Gold Ring',
     isActive: true,
     images: [{ url: 'https://example.com/ring.jpg' }],
-    materialVariants: [
+    variants: [
       {
-        material: 'gold',
+        attribute: { type: 'material', value: 'gold' },
         stock: 2,
         sizeVariants: [{ label: 'M', stock: 2 }],
       },
     ],
     async save() {
       savedProduct = {
-        materialVariants: this.materialVariants.map((variant) => ({
-          material: variant.material,
+        variants: this.variants.map((variant) => ({
+          attribute: variant.attribute,
           stock: variant.stock,
           sizeVariants: variant.sizeVariants.map((sizeVariant) => ({
             label: sizeVariant.label,
@@ -52,7 +52,7 @@ test('createOrder converts the cart into an order, decrements stock, and clears 
         quantity: 1,
         price: 200,
         size: 'M',
-        material: 'gold',
+        selectedAttribute: { type: 'material', value: 'gold' },
       },
     ],
     totalAmount: 200,
@@ -131,9 +131,9 @@ test('createOrder converts the cart into an order, decrements stock, and clears 
     totalAmount: 0,
   });
   assert.deepEqual(savedProduct, {
-    materialVariants: [
+    variants: [
       {
-        material: 'gold',
+        attribute: { type: 'material', value: 'gold' },
         stock: 1,
         sizeVariants: [{ label: 'M', stock: 1 }],
       },
@@ -187,7 +187,7 @@ test('previewOrderPricing returns first-order discount pricing for the current c
           quantity: 2,
           price: 500,
           size: 'M',
-          material: 'gold',
+          selectedAttribute: { type: 'material', value: 'gold' },
         },
       ],
     }),

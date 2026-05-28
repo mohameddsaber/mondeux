@@ -67,7 +67,7 @@ test('getAllProducts returns catalog data with pagination and facets', async () 
           name: 'Silver Ring',
           slug: 'silver-ring',
           images: [{ url: 'https://example.com/ring.jpg', isPrimary: true }],
-          materialVariants: [{ material: 'silver', price: 120, stock: 4, sizeVariants: [] }],
+          variants: [{ attribute: { type: 'material', value: 'silver' }, price: 120, stock: 4, sizeVariants: [] }],
           category: { name: 'Rings', slug: 'rings' },
           subCategory: { name: 'Silver Rings', slug: 'silver-rings' },
         },
