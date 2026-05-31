@@ -79,7 +79,7 @@ function App() {
         </>
       )}
       {!isAdmin && !isCheckingAdmin && (
-        <div className="hidden md:block h-[165px] bg-background"></div>
+        <div className="hidden md:block h-[140px] bg-background"></div>
       )}
       {isAdmin && (
         <div className="hidden md:block h-[130px] bg-background"></div>

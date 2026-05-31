@@ -70,8 +70,8 @@
 }
 
 @theme inline { 
-  --font-sans: 'Karla', sans-serif;
-  --font-serif: 'Playfair Display', serif;
+  --font-sans: 'Optima', 'Helvetica', sans-serif;
+  --font-serif: 'Optima', 'Helvetica', sans-serif;
   --radius-sm: calc(var(--radius) - 4px); 
   --radius-md: calc(var(--radius) - 2px); 
   --radius-lg: var(--radius); 
