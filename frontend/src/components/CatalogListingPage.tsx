@@ -437,13 +437,15 @@ function CatalogListingPage({
         {loading ? (
           <div className="grid grid-cols-2 gap-x-0.5 gap-y-6 px-1 md:grid-cols-4 md:gap-x-1 md:gap-y-8 md:px-2">
             {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="flex flex-col space-y-4 overflow-hidden animate-pulse">
-                <div className="aspect-[4/5] w-full bg-secondary"></div>
-                <div className="space-y-3 px-2 flex flex-col items-center">
-                  <div className="h-5 w-3/4 bg-secondary"></div>
-                  <div className="h-4 w-1/3 bg-secondary"></div>
+              <FadeIn key={index} delay={0.2}>
+                <div className="flex flex-col space-y-4 overflow-hidden animate-pulse">
+                  <div className="aspect-[4/5] w-full bg-secondary"></div>
+                  <div className="space-y-3 px-2 flex flex-col items-center">
+                    <div className="h-5 w-3/4 bg-secondary"></div>
+                    <div className="h-4 w-1/3 bg-secondary"></div>
+                  </div>
                 </div>
-              </div>
+              </FadeIn>
             ))}
           </div>
         ) : error ? (
@@ -481,9 +483,11 @@ function CatalogListingPage({
         ) : (
           <div className="grid grid-cols-2 gap-x-0.5 gap-y-6 px-1 md:grid-cols-4 md:gap-x-1 md:gap-y-8 md:px-2">
             {products.map((product, idx) => (
-              <Link to={`/products/${product.slug}`} key={product._id}>
-                <ProductCard product={product} index={idx} />
-              </Link>
+              <FadeIn key={product._id} delay={0.2}>
+                <Link to={`/products/${product.slug}`}>
+                  <ProductCard product={product} index={idx} />
+                </Link>
+              </FadeIn>
             ))}
           </div>
         )}
