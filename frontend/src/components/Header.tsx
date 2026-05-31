@@ -58,11 +58,9 @@ function Header() {
 
             {/* Center section */}
             <a href="/" className="flex justify-center">
-              <h1 className="text-3xl md:text-4xl font-serif font-bold tracking-widest text-foreground">
-                MONDEUX
-              </h1>
+              <img src="/logo-black.png" alt="MONDEUX" className="h-10 md:h-12 object-contain" />
             </a>
-            
+
             {/* Right section */}
             <div className="flex items-center gap-4 justify-end">
               <div className="group flex items-center">
@@ -90,8 +88,8 @@ function Header() {
                   </span>
                 )}
               </Link>
-              
-              <button 
+
+              <button
                 className="p-2 relative group"
                 onClick={() => setIsCartOpen(true)}
               >
@@ -104,38 +102,36 @@ function Header() {
               </button>
             </div>
           </div>
-          
+
           <nav className="flex items-center justify-center gap-10 text-[13px] text-foreground font-medium overflow-x-auto font-sans tracking-[0.15em]">
             <Link to="/products?sort=price_asc" className="whitespace-nowrap hover:text-ring transition-colors duration-300 relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-[1px] after:bottom-0 after:left-0 after:bg-ring after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left pb-1">
               SHOP ALL
             </Link>
-
-            <Link to="/products?sort=newest&title=NEW IN" className="whitespace-nowrap hover:text-ring transition-colors duration-300 relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-[1px] after:bottom-0 after:left-0 after:bg-ring after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left pb-1">
-              NEW IN
-            </Link>
-
             <Link to="/products?sort=best-selling&title=BEST SELLERS" className="whitespace-nowrap hover:text-ring transition-colors duration-300 relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-[1px] after:bottom-0 after:left-0 after:bg-ring after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left pb-1">
               BEST SELLERS
             </Link>
-            <Link to="/subcategory/gold-rings" className="whitespace-nowrap hover:text-ring transition-colors duration-300 relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-[1px] after:bottom-0 after:left-0 after:bg-ring after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left pb-1">
-              GOLD RINGS
+            <Link to="/category/tops" className="whitespace-nowrap hover:text-ring transition-colors duration-300 relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-[1px] after:bottom-0 after:left-0 after:bg-ring after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left pb-1">
+              TOPS
             </Link>
-            <Link to="/subcategory/silver-rings" className="whitespace-nowrap hover:text-ring transition-colors duration-300 relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-[1px] after:bottom-0 after:left-0 after:bg-ring after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left pb-1">
-              SILVER RINGS
+            <Link to="/category/bottoms" className="whitespace-nowrap hover:text-ring transition-colors duration-300 relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-[1px] after:bottom-0 after:left-0 after:bg-ring after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left pb-1">
+              BOTTOMS
+            </Link>
+            <Link to="/category/jewellery" className="whitespace-nowrap hover:text-ring transition-colors duration-300 relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-[1px] after:bottom-0 after:left-0 after:bg-ring after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left pb-1">
+              JEWELLERY
             </Link>
             <Link to="/my-orders" className="whitespace-nowrap hover:text-ring transition-colors duration-300 relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-[1px] after:bottom-0 after:left-0 after:bg-ring after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left pb-1">
               MY ORDERS
             </Link>
           </nav>
         </div>
-        
-        {/* Sidebar component */}
-        <Sidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
       </header>
 
+      {/* Sidebar component */}
+      <Sidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
+
       {/* Shopping Cart Panel */}
-      <ShoppingCartPanel 
-        isOpen={isCartOpen} 
+      <ShoppingCartPanel
+        isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
       />
     </>

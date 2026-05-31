@@ -27,8 +27,8 @@ const CategorySection = ({
   const loading = isPending;
 
   return (
-    <section className="py-24 px-4 md:px-8">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-24 px-1 md:px-2">
+      <div className="max-w-[1600px] mx-auto">
         <FadeIn yOffset={40}>
           {/* Category Header with Image */}
           <div
@@ -56,7 +56,7 @@ const CategorySection = ({
         {/* Products Grid */}
         <FadeIn delay={0.2}>
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-0.5 gap-y-6 px-1 md:gap-x-1 md:gap-y-8 md:px-2">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="animate-pulse flex flex-col gap-4">
                   <div className="bg-secondary aspect-[4/5]"></div>
@@ -66,7 +66,7 @@ const CategorySection = ({
               ))}
             </div>
           ) : products.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-0.5 gap-y-6 px-1 md:gap-x-1 md:gap-y-8 md:px-2">
               {products.map((product, idx) => (
                 <Link key={product._id} to={`/products/${product.slug}`}>
                   <ProductCard product={product} index={idx} />

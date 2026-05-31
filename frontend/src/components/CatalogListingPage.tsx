@@ -273,11 +273,10 @@ function CatalogListingPage({
                             ),
                           })
                         }
-                        className={`px-4 py-2 text-xs font-sans tracking-widest transition-all duration-300 ${
-                          selected
+                        className={`px-4 py-2 text-xs font-sans tracking-widest transition-all duration-300 ${selected
                             ? "border border-foreground bg-foreground text-background"
                             : "border border-border text-muted-foreground hover:border-ring hover:text-foreground"
-                        }`}
+                          }`}
                       >
                         {option.label.toUpperCase()} ({option.count})
                       </button>
@@ -302,11 +301,10 @@ function CatalogListingPage({
                             ),
                           })
                         }
-                        className={`px-4 py-2 text-xs font-sans tracking-widest transition-all duration-300 ${
-                          selected
+                        className={`px-4 py-2 text-xs font-sans tracking-widest transition-all duration-300 ${selected
                             ? "border border-foreground bg-foreground text-background"
                             : "border border-border text-muted-foreground hover:border-ring hover:text-foreground"
-                        }`}
+                          }`}
                       >
                         {option.label.toUpperCase()} ({option.count})
                       </button>
@@ -437,7 +435,7 @@ function CatalogListingPage({
         />
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-8 px-8 md:grid-cols-4 md:gap-12">
+          <div className="grid grid-cols-2 gap-x-0.5 gap-y-6 px-1 md:grid-cols-4 md:gap-x-1 md:gap-y-8 md:px-2">
             {Array.from({ length: 8 }).map((_, index) => (
               <div key={index} className="flex flex-col space-y-4 overflow-hidden animate-pulse">
                 <div className="aspect-[4/5] w-full bg-secondary"></div>
@@ -481,7 +479,7 @@ function CatalogListingPage({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-8 px-8 md:grid-cols-4 md:gap-12">
+          <div className="grid grid-cols-2 gap-x-0.5 gap-y-6 px-1 md:grid-cols-4 md:gap-x-1 md:gap-y-8 md:px-2">
             {products.map((product, idx) => (
               <Link to={`/products/${product.slug}`} key={product._id}>
                 <ProductCard product={product} index={idx} />

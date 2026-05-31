@@ -65,21 +65,25 @@ function App() {
           <div className="fixed top-0 left-0 right-0 z-50">
             <HeaderAdmin />
           </div>
-          <div className="md:hidden h-[110px] bg-[#f4f4f5]"></div>
+          <div className="md:hidden h-[110px] bg-background"></div>
         </>
       ) : isCheckingAdmin ? null : (
         <>
           <div className="hidden md:block fixed top-0 left-0 right-0 z-50">
             <Header />
-
           </div>
           <div className="md:hidden fixed top-0 left-0 right-0 z-50">
             <NavBar />
           </div>
-          <div className="md:hidden h-[76px] bg-[#f4f4f5]"></div>
+          <div className="md:hidden h-[90px] bg-background"></div>
         </>
       )}
-      <div className="hidden md:block h-[130px] bg-[#f4f4f5]"></div>
+      {!isAdmin && !isCheckingAdmin && (
+        <div className="hidden md:block h-[165px] bg-background"></div>
+      )}
+      {isAdmin && (
+        <div className="hidden md:block h-[130px] bg-background"></div>
+      )}
 
       {/* Routes */}
       <Routes>

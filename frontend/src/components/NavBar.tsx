@@ -49,9 +49,7 @@ function NavBar() {
           
           {/* Center section */}
           <a href="/" className="flex justify-center items-center">
-            <h1 className="text-xl sm:text-2xl font-serif font-bold tracking-widest text-foreground">
-              MONDEUX
-            </h1>
+            <img src="/logo.png" alt="MONDEUX" className="h-8 sm:h-10 object-contain" />
           </a>       
 
           {/* Right section */}
@@ -97,10 +95,10 @@ function NavBar() {
             </div>
           </div>
         </div>
-
-        {/* Sidebar menu */}
-        <Sidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
       </div>
+
+      {/* Sidebar menu */}
+      <Sidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
       {/* Shopping Cart Panel */}
       <ShoppingCartPanel 

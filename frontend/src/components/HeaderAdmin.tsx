@@ -36,9 +36,7 @@ const HeaderAdmin = () => {
             </button>
             
             {/* Centered Title */}
-            <h1 className="text-xl sm:text-2xl font-bold tracking-widest font-[Karla] text-center absolute left-1/2 transform -translate-x-1/2">
-              MONDEUX
-            </h1>
+            <img src="/logo.png" alt="MONDEUX" className="h-8 sm:h-10 object-contain absolute left-1/2 transform -translate-x-1/2" />
 
             {/* Placeholder for alignment (or another link on the right) */}
             <div className='w-12 h-1'></div>

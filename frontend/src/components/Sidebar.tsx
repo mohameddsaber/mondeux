@@ -1,5 +1,5 @@
-import {  Search, Plus } from 'lucide-react';
-import {  useState } from "react";
+import { Search, Plus } from 'lucide-react';
+import { useState } from "react";
 import { Link, useNavigate } from 'react-router-dom';
 import { getApiErrorMessage } from '../lib/api';
 import { useLogoutMutation } from '../hooks/useStoreData';
@@ -11,10 +11,10 @@ interface SidebarProps {
 
 function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [searchValue, setSearchValue] = useState<string>("");
-  const [expandedMenus, setExpandedMenus] = useState<{[key: string]: boolean}>({});
+  const [expandedMenus, setExpandedMenus] = useState<{ [key: string]: boolean }>({});
   const logoutMutation = useLogoutMutation();
   const navigate = useNavigate();
-  
+
   const baseText = "font-bold font-[Karla] tracking-wider text-[12px] text-[#121212]";
   const itemPadding = "pb-4";
   const sidebarItem = `w-full flex items-center justify-between text-left ${baseText} ${itemPadding}`;
@@ -24,8 +24,7 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // helper function for + rotation
   const getPlusStyling = (menuName: string) =>
-    `w-5 h-5 transform transition-transform duration-300 cursor-pointer h-[15px] w-[7px] ${
-      expandedMenus[menuName] ? "rotate-45" : ""
+    `w-5 h-5 transform transition-transform duration-300 cursor-pointer h-[15px] w-[7px] ${expandedMenus[menuName] ? "rotate-45" : ""
     }`;
 
   const toggleMenu = (menuName: string) => {
@@ -35,13 +34,13 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
     }));
   };
   const handleLogout = async () => {
-  try {
-    await logoutMutation.mutateAsync();
-    window.location.assign("/");
-  } catch (error) {
-    console.error("Error logging out:", getApiErrorMessage(error, "Logout failed"));
-  }
-};
+    try {
+      await logoutMutation.mutateAsync();
+      window.location.assign("/");
+    } catch (error) {
+      console.error("Error logging out:", getApiErrorMessage(error, "Logout failed"));
+    }
+  };
 
   const submitSearch = () => {
     const query = searchValue.trim();
@@ -58,9 +57,8 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <div
-      className={`fixed top-0 left-0 h-full w-[400px] bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 overflow-y-auto ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      }`}
+      className={`fixed top-0 left-0 h-full w-[400px] bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 overflow-y-auto ${isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
     >
       <div className="px-10 py-7">
         {/* Close button */}
@@ -101,135 +99,103 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
         </div>
 
-        {/* Menu items */} 
+        {/* Menu items */}
         <nav>
           <ul className="space-y-0">
-            {/* Modern Rodeo - Expandable */}
-            {/* <li>
-              <button
-                onClick={() => toggleMenu("modern-rodeo")}
-                className={sidebarItem}
-              >
-                <span>MODERN RODEO</span>
-                <Plus className={getPlusStyling("modern-rodeo")} />
-              </button>
-            </li> */}
-
             {/* New In */}
             <li>
-            <Link to="/products?sort=newest" className={sidebarLink} onClick={onClose}>
-              NEW IN
-            </Link>            
+              <Link to="/products?sort=newest" className={sidebarLink} onClick={onClose}>
+                NEW IN
+              </Link>
             </li>
 
             {/* Best Sellers */}
             <li>
-            <Link to="/products?sort=best-selling" className={sidebarLink} onClick={onClose}>
-              BEST SELLERS
-            </Link>              
+              <Link to="/products?sort=best-selling" className={sidebarLink} onClick={onClose}>
+                BEST SELLERS
+              </Link>
             </li>
 
-            {/* Perle
-            <li>
-              <a href="#" className={sidebarLink}>PERLE</a>
-            </li> */}
-
-
-            {/* Shop All - Expandable */}
+            {/* Tops - Expandable */}
             <li>
               <button
-                onClick={() => toggleMenu("shop-all")}
+                onClick={() => toggleMenu("tops")}
                 className={sidebarItem}
               >
-                <span>SHOP ALL</span>
-                <Plus className={getPlusStyling("shop-all")} />
+                <span>TOPS</span>
+                <Plus className={getPlusStyling("tops")} />
               </button>
-              {expandedMenus["shop-all"] && (
+
+              {expandedMenus["tops"] && (
                 <ul className={submenu}>
-                  <li><Link to="/products" className={submenuLink} onClick={onClose}>All Jewelry</Link></li>
-                  <li><Link to="/category/rings" className={submenuLink} onClick={onClose}>Shop Rings</Link></li>
-                  <li><Link to="/category/bracelets" className={submenuLink} onClick={onClose}>Shop Bracelets</Link></li>
-                  <li><Link to="/category/necklaces" className={submenuLink} onClick={onClose}>Shop Necklaces</Link></li>
-                  <li><Link to="/category/wallets" className={submenuLink} onClick={onClose}>Shop Wallets</Link></li>
+                  <li><Link to="/category/tops" className={submenuLink} onClick={onClose}>All Tops</Link></li>
+                  <li><Link to="/subcategory/t-shirts" className={submenuLink} onClick={onClose}>T-Shirts</Link></li>
+                  <li><Link to="/subcategory/shirts" className={submenuLink} onClick={onClose}>Shirts</Link></li>
+                  <li><Link to="/subcategory/sweaters" className={submenuLink} onClick={onClose}>Sweaters</Link></li>
+                  <li><Link to="/subcategory/hoodies" className={submenuLink} onClick={onClose}>Hoodies</Link></li>
+                  <li><Link to="/subcategory/jackets" className={submenuLink} onClick={onClose}>Jackets</Link></li>
+                  <li><Link to="/subcategory/polos" className={submenuLink} onClick={onClose}>Polos</Link></li>
+                  <li><Link to="/subcategory/tank-tops" className={submenuLink} onClick={onClose}>Tank Tops</Link></li>
+
                 </ul>
               )}
             </li>
 
-            {/* Rings - Expandable */}
+            {/* Bottoms - Expandable */}
             <li>
               <button
-                onClick={() => toggleMenu("rings")}
+                onClick={() => toggleMenu("bottoms")}
                 className={sidebarItem}
               >
-                <span>RINGS</span>
-                <Plus className={getPlusStyling("rings")} />
+                <span>BOTTOMS</span>
+                <Plus className={getPlusStyling("bottoms")} />
               </button>
 
-              {expandedMenus["rings"] && (
+              {expandedMenus["bottoms"] && (
                 <ul className={submenu}>
-                  <li><Link to="category/rings" className={submenuLink} onClick={onClose}>All Rings</Link></li>
-                  <li><Link to="subcategory/silver-rings" className={submenuLink} onClick={onClose}>Silver Rings</Link></li>
-                  <li><Link to="subcategory/gold-rings" className={submenuLink} onClick={onClose}>Gold Rings</Link></li>
-                  {/* <li><Link to="#" className={submenuLink}>Statement Rings</Link></li>
-                  <li><Link to="#" className={submenuLink}>Stone Rings</Link></li>
-                  <li><Link to="#" className={submenuLink}>Signet Rings</Link></li> */}
+                  <li><Link to="/category/bottoms" className={submenuLink} onClick={onClose}>All Bottoms</Link></li>
+                  <li><Link to="/subcategory/jeans" className={submenuLink} onClick={onClose}>Jeans</Link></li>
+                  <li><Link to="/subcategory/trousers" className={submenuLink} onClick={onClose}>Trousers</Link></li>
+                  <li><Link to="/subcategory/shorts" className={submenuLink} onClick={onClose}>Shorts</Link></li>
+                  <li><Link to="/subcategory/sweatpants" className={submenuLink} onClick={onClose}>Sweatpants</Link></li>
                 </ul>
               )}
             </li>
 
-            {/* Necklaces - Expandable */}
+            {/* Footwear - Expandable */}
             <li>
               <button
-                onClick={() => toggleMenu("necklaces")}
+                onClick={() => toggleMenu("footwear")}
                 className={sidebarItem}
               >
-                <span>NECKLACES</span>
-                <Plus className={getPlusStyling("necklaces")} />
+                <span>FOOTWEAR</span>
+                <Plus className={getPlusStyling("footwear")} />
               </button>
-              {expandedMenus["necklaces"] && (
+              {expandedMenus["footwear"] && (
                 <ul className={submenu}>
-                  <li><Link to="/category/necklaces" className={submenuLink} onClick={onClose}>All Necklaces</Link></li>
-                  <li><Link to="subcategory/silver-necklaces" className={submenuLink} onClick={onClose}>Silver Necklaces</Link></li>
-                  <li><Link to="subcategory/gold-necklaces" className={submenuLink} onClick={onClose}>Gold Necklaces</Link></li>
-                  {/* <li><a href="#" className={submenuLink}>Pendant Necklaces</a></li>
-                  <li><a href="#" className={submenuLink}>Chain Necklaces</a></li> */}
+                  <li><Link to="/category/footwear" className={submenuLink} onClick={onClose}>All Footwear</Link></li>
+                  <li><Link to="/subcategory/sneakers" className={submenuLink} onClick={onClose}>Sneakers</Link></li>
+                  <li><Link to="/subcategory/boots" className={submenuLink} onClick={onClose}>Boots</Link></li>
+                  <li><Link to="/subcategory/loafers" className={submenuLink} onClick={onClose}>Loafers</Link></li>
                 </ul>
               )}
             </li>
 
-            {/* Bracelets - Expandable */}
+            {/* Jewellery - Expandable */}
             <li>
               <button
-                onClick={() => toggleMenu("bracelets")}
+                onClick={() => toggleMenu("jewellery")}
                 className={sidebarItem}
               >
-                <span>BRACELETS</span>
-                <Plus className={getPlusStyling("bracelets")} />
+                <span>JEWELLERY</span>
+                <Plus className={getPlusStyling("jewellery")} />
               </button>
-              {expandedMenus["bracelets"] && (
+              {expandedMenus["jewellery"] && (
                 <ul className={submenu}>
-                  <li><Link to="/category/bracelets" className={submenuLink} onClick={onClose}>All Bracelets</Link></li>
-                  <li><Link to="/subcategory/silver-bracelets" className={submenuLink} onClick={onClose}>Silver Bracelets</Link></li>
-                  <li><Link to="/subcategory/gold-bracelets" className={submenuLink} onClick={onClose}>Gold Bracelets</Link></li>
-                  {/* <li><a href="#" className={submenuLink}>Cuff Bracelets</a></li> */}
-                </ul>
-              )}
-            </li>
-
-            {/* Wallets - Expandable */}
-            <li>
-              <button
-                onClick={() => toggleMenu("wallets")}
-                className={sidebarItem}
-              >
-                <span>WALLETS</span>
-                <Plus className={getPlusStyling("wallets")} />
-              </button>
-              {expandedMenus["wallets"] && (
-                <ul className={submenu}>
-                  <li><a href="#" className={submenuLink} onClick={onClose}>All Wallets</a></li>
-                  <li><a href="#" className={submenuLink} onClick={onClose}>Slim Wallets</a></li>
-                  <li><a href="#" className={submenuLink} onClick={onClose}>Card Holders</a></li>
+                  <li><Link to="/category/jewellery" className={submenuLink} onClick={onClose}>All Jewellery</Link></li>
+                  <li><Link to="/subcategory/rings" className={submenuLink} onClick={onClose}>Rings</Link></li>
+                  <li><Link to="/subcategory/necklaces" className={submenuLink} onClick={onClose}>Necklaces</Link></li>
+                  <li><Link to="/subcategory/bracelets" className={submenuLink} onClick={onClose}>Bracelets</Link></li>
                 </ul>
               )}
             </li>
@@ -245,10 +211,20 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
               {expandedMenus["accessories"] && (
                 <ul className={submenu}>
-                  <li><a href="/products" className={submenuLink} onClick={onClose}>All Accessories</a></li>
+                  <li><Link to="/category/accessories" className={submenuLink} onClick={onClose}>All Accessories</Link></li>
+                  <li><Link to="/subcategory/bags" className={submenuLink} onClick={onClose}>Bags</Link></li>
+                  <li><Link to="/subcategory/belts" className={submenuLink} onClick={onClose}>Belts</Link></li>
+                  <li><Link to="/subcategory/hats" className={submenuLink} onClick={onClose}>Hats</Link></li>
+                  <li><Link to="/subcategory/sunglasses" className={submenuLink} onClick={onClose}>Sunglasses</Link></li>
+                  <li><Link to="/subcategory/wallets" className={submenuLink} onClick={onClose}>Wallets</Link></li>
+                  <li><Link to="/subcategory/gloves" className={submenuLink} onClick={onClose}>Gloves</Link></li>
+                  <li><Link to="/subcategory/socks" className={submenuLink} onClick={onClose}>Socks</Link></li>
+                  <li><Link to="/subcategory/ties" className={submenuLink} onClick={onClose}>Ties</Link></li>
+                  <li><Link to="/subcategory/cufflinks" className={submenuLink} onClick={onClose}>Cufflinks</Link></li>
                 </ul>
               )}
             </li>
+
             <li className={sidebarItem}>
               <Link to="/my-orders" className="" onClick={onClose}>MY ORDERS</Link>
             </li>
