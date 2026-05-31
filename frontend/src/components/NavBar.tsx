@@ -26,37 +26,39 @@ function NavBar() {
 
   return (
     <>
-      <div className="relative">
+      <div className="relative z-50">
         {/* Top bar with menu button */}
-        <p className='w-full text-[12px] h-[23px] font-[Karla] bg-black text-white flex justify-center items-center'>
-          Welcome to Mondeux We are Live
+        <p className='w-full text-[10px] sm:text-[12px] h-[30px] font-sans bg-primary text-primary-foreground flex justify-center items-center tracking-widest'>
+          WELCOME TO MONDEUX. WE ARE LIVE.
         </p>
-        <div className="grid grid-cols-3 items-center h-[52px] bg-white shadow-md px-4">
+        <div className="grid grid-cols-3 items-center h-[60px] bg-background/90 backdrop-blur-sm shadow-sm px-4">
           {/* Left section */}
           <div className="flex justify-start">
             {isOpen ? (
               <FaTimes
-                className="cursor-pointer text-xl"
+                className="cursor-pointer text-xl text-foreground hover:text-ring transition-colors duration-300"
                 onClick={() => setIsOpen(false)}
               />
             ) : (
               <Menu
-                className="cursor-pointer text-xl"
+                className="cursor-pointer text-xl text-foreground hover:text-ring transition-colors duration-300"
                 onClick={() => setIsOpen(true)}
               />
             )}
           </div>
           
           {/* Center section */}
-          <a href="/" className="flex justify-center">
-            <img src="/Mondeux.png" alt="Mondeux Logo" className="w-14 h-14" />
+          <a href="/" className="flex justify-center items-center">
+            <h1 className="text-xl sm:text-2xl font-serif font-bold tracking-widest text-foreground">
+              MONDEUX
+            </h1>
           </a>       
 
           {/* Right section */}
-          <div className="flex gap-6 text-[#2a3a51] text-md justify-end items-center">
+          <div className="flex gap-4 text-foreground text-md justify-end items-center">
             <div className="group flex items-center">
               {/* wrapper that animates width; input inside is full-width */}
-              <div className="w-0 group-hover:w-40 transition-all duration-500 ease-in-out overflow-hidden ml-2 min-w-0">
+              <div className="w-0 group-hover:w-32 sm:group-hover:w-40 transition-all duration-500 ease-in-out overflow-hidden ml-2 min-w-0">
                 <input
                   type="text"
                   placeholder="Search..."
@@ -67,27 +69,27 @@ function NavBar() {
                       submitSearch();
                     }
                   }}
-                  className="w-full h-[30px] px-2 border border-gray-300 rounded bg-gray-100 outline-none"
+                  className="w-full h-[30px] px-2 border-b border-border bg-transparent outline-none font-sans text-sm focus:border-ring transition-colors"
                 />
               </div>
-              <Search className="cursor-pointer" onClick={submitSearch} />
+              <Search className="cursor-pointer text-foreground hover:text-ring transition-colors duration-300 w-5 h-5" onClick={submitSearch} />
             </div>
-            <Link to="/wishlist" className="relative">
-              <Heart className="cursor-pointer" />
+            <Link to="/wishlist" className="relative group">
+              <Heart className="cursor-pointer text-foreground group-hover:text-ring transition-colors duration-300 w-5 h-5" />
               {wishlistCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-black text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-medium">
+                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-sans">
                   {wishlistCount}
                 </span>
               )}
             </Link>
-            <div className="relative">
+            <div className="relative group">
               <button 
                 onClick={() => setIsCartOpen(true)}
                 className="relative"
               >
-                <ShoppingBag className="cursor-pointer" />
+                <ShoppingBag className="cursor-pointer text-foreground group-hover:text-ring transition-colors duration-300 w-5 h-5" />
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-black text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-medium">
+                  <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-sans">
                     {cartItemCount}
                   </span>
                 )}

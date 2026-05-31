@@ -10,6 +10,7 @@ import {
   useCatalogProductsQuery,
   type CatalogFacetOption,
 } from "@/hooks/useStoreData";
+import { FadeIn } from "@/components/ui/FadeIn";
 
 type CatalogListingPageProps = {
   categorySlug?: string;
@@ -202,21 +203,23 @@ function CatalogListingPage({
   ]);
 
   return (
-    <div className="min-h-screen bg-white">
-      <main>
-        <div className="mb-6 px-[60px] pb-[15px] pt-[37.5px] text-center md:px-[80px] md:pb-[20px] md:pt-[50px]">
-          <h2 className="mb-3 font-ui text-[22px] text-[#121212] -tracking-tight md:text-[28px]">
-            {resolvedTitle}
-          </h2>
-          <p className="text-[12px] text-gray-600">
-            Browse refined essentials with live filters for material, availability,
-            price, and sort order.
-          </p>
-        </div>
+    <div className="min-h-screen bg-background text-foreground">
+      <main className="max-w-[1600px] mx-auto pb-24">
+        <FadeIn yOffset={30}>
+          <div className="mb-12 px-8 pb-4 pt-16 md:pt-24 text-center">
+            <h2 className="mb-6 font-serif text-4xl md:text-5xl tracking-widest text-foreground">
+              {resolvedTitle}
+            </h2>
+            <p className="text-sm font-sans tracking-[0.1em] text-muted-foreground max-w-2xl mx-auto">
+              Browse refined essentials with live filters for material, availability,
+              price, and sort order.
+            </p>
+          </div>
+        </FadeIn>
 
-        <div className="mx-5 border-b border-gray-200 pb-[10px]">
-          <div className="hidden items-center justify-between gap-4 md:flex">
-            <div className="flex flex-wrap items-center gap-3">
+        <div className="mx-8 border-b border-border pb-6 mb-12">
+          <div className="hidden items-center justify-between gap-6 md:flex">
+            <div className="flex flex-wrap items-center gap-4">
               {categoryOptions.length > 0 ? (
                 <select
                   value={urlState.selectedCategory}
@@ -226,7 +229,7 @@ function CatalogListingPage({
                       subCategory: "",
                     })
                   }
-                  className="rounded border border-gray-200 px-3 py-2 text-[12px] font-[Karla] tracking-widest text-gray-600 outline-none"
+                  className="bg-transparent rounded-none border-b border-border px-0 py-2 text-xs font-sans tracking-widest text-foreground outline-none focus:border-ring transition-colors"
                 >
                   <option value="">ALL CATEGORIES</option>
                   {categoryOptions.map((option) => (
@@ -243,7 +246,7 @@ function CatalogListingPage({
                   onChange={(event) =>
                     updateSearchParams({ subCategory: event.target.value })
                   }
-                  className="rounded border border-gray-200 px-3 py-2 text-[12px] font-[Karla] tracking-widest text-gray-600 outline-none"
+                  className="bg-transparent rounded-none border-b border-border px-0 py-2 text-xs font-sans tracking-widest text-foreground outline-none focus:border-ring transition-colors"
                 >
                   <option value="">ALL SUBCATEGORIES</option>
                   {subCategoryOptions.map((option) => (
@@ -255,7 +258,7 @@ function CatalogListingPage({
               ) : null}
 
               {materialOptions.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3">
                   {materialOptions.map((option) => {
                     const selected = urlState.selectedMaterials.includes(option.value);
 
@@ -270,10 +273,10 @@ function CatalogListingPage({
                             ),
                           })
                         }
-                        className={`rounded-full border px-3 py-2 text-[11px] font-[Karla] tracking-widest transition ${
+                        className={`px-4 py-2 text-xs font-sans tracking-widest transition-all duration-300 ${
                           selected
-                            ? "border-black bg-black text-white"
-                            : "border-gray-200 text-gray-600"
+                            ? "border border-foreground bg-foreground text-background"
+                            : "border border-border text-muted-foreground hover:border-ring hover:text-foreground"
                         }`}
                       >
                         {option.label.toUpperCase()} ({option.count})
@@ -284,7 +287,7 @@ function CatalogListingPage({
               ) : null}
 
               {availabilityOptions.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3">
                   {availabilityOptions.map((option) => {
                     const selected = urlState.selectedAvailability.includes(option.value);
 
@@ -299,10 +302,10 @@ function CatalogListingPage({
                             ),
                           })
                         }
-                        className={`rounded-full border px-3 py-2 text-[11px] font-[Karla] tracking-widest transition ${
+                        className={`px-4 py-2 text-xs font-sans tracking-widest transition-all duration-300 ${
                           selected
-                            ? "border-black bg-black text-white"
-                            : "border-gray-200 text-gray-600"
+                            ? "border border-foreground bg-foreground text-background"
+                            : "border border-border text-muted-foreground hover:border-ring hover:text-foreground"
                         }`}
                       >
                         {option.label.toUpperCase()} ({option.count})
@@ -313,7 +316,7 @@ function CatalogListingPage({
               ) : null}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-6">
               <input
                 type="number"
                 min="0"
@@ -322,7 +325,7 @@ function CatalogListingPage({
                 onChange={(event) =>
                   updateSearchParams({ minPrice: event.target.value })
                 }
-                className="w-24 rounded border border-gray-200 px-3 py-2 text-[12px] font-[Karla] tracking-widest text-gray-600 outline-none"
+                className="w-20 bg-transparent rounded-none border-b border-border px-0 py-2 text-xs font-sans tracking-widest text-foreground outline-none focus:border-ring transition-colors"
               />
               <input
                 type="number"
@@ -332,18 +335,18 @@ function CatalogListingPage({
                 onChange={(event) =>
                   updateSearchParams({ maxPrice: event.target.value })
                 }
-                className="w-24 rounded border border-gray-200 px-3 py-2 text-[12px] font-[Karla] tracking-widest text-gray-600 outline-none"
+                className="w-20 bg-transparent rounded-none border-b border-border px-0 py-2 text-xs font-sans tracking-widest text-foreground outline-none focus:border-ring transition-colors"
               />
               <select
                 value={urlState.sortBy}
                 onChange={(event) =>
                   updateSearchParams({ sort: event.target.value })
                 }
-                className="appearance-none rounded border border-gray-200 bg-white px-3 py-2 text-[12px] font-[Karla] tracking-widest text-gray-600 outline-none"
+                className="appearance-none bg-transparent rounded-none border-b border-border px-0 py-2 text-xs font-sans tracking-widest text-foreground outline-none focus:border-ring transition-colors cursor-pointer"
               >
                 {SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {option.label.toUpperCase()}
                   </option>
                 ))}
               </select>
@@ -359,7 +362,7 @@ function CatalogListingPage({
                     sort: urlState.searchQuery ? "relevance" : defaultSort,
                   })
                 }
-                className="text-[12px] font-[Karla] tracking-widest text-gray-500 underline"
+                className="text-xs font-sans tracking-[0.2em] text-muted-foreground hover:text-foreground border-b border-transparent hover:border-foreground transition-colors pb-1"
               >
                 CLEAR
               </button>
@@ -369,18 +372,18 @@ function CatalogListingPage({
           <div className="flex items-center justify-between md:hidden">
             <button
               onClick={() => setFilterOpen(true)}
-              className="mx-[15px] px-[18px] text-sm font-[Karla] font-medium tracking-wide uppercase hover:text-gray-600"
+              className="text-xs font-sans font-medium tracking-widest uppercase hover:text-ring transition-colors"
             >
               FILTER
             </button>
-            <div className="flex items-center gap-2 text-[12px] font-[Karla] tracking-widest text-gray-500">
+            <div className="flex items-center gap-2 text-xs font-sans tracking-widest text-muted-foreground">
               <span>{totalResults} RESULTS</span>
-              <Plus size={12} className="text-gray-700" />
+              <Plus size={14} />
             </div>
           </div>
 
-          <div className="mt-4 hidden md:flex items-center justify-between text-[12px] font-[Karla] tracking-widest text-gray-500">
-            <span>{totalResults} MATCHING PRODUCTS</span>
+          <div className="mt-6 hidden md:flex items-center justify-between text-xs font-sans tracking-[0.2em] text-muted-foreground">
+            <span>{totalResults} MATCHING PIECES</span>
             {urlState.searchQuery ? (
               <span>SEARCH: {urlState.searchQuery.toUpperCase()}</span>
             ) : null}
@@ -434,27 +437,27 @@ function CatalogListingPage({
         />
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-4 p-[20px] md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-8 px-8 md:grid-cols-4 md:gap-12">
             {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="flex flex-col space-y-3 overflow-hidden rounded-lg animate-pulse">
-                <div className="h-64 w-full rounded-lg bg-gray-200"></div>
-                <div className="space-y-2 px-2">
-                  <div className="h-4 w-3/4 rounded bg-gray-200"></div>
-                  <div className="h-4 w-1/2 rounded bg-gray-200"></div>
+              <div key={index} className="flex flex-col space-y-4 overflow-hidden animate-pulse">
+                <div className="aspect-[4/5] w-full bg-secondary"></div>
+                <div className="space-y-3 px-2 flex flex-col items-center">
+                  <div className="h-5 w-3/4 bg-secondary"></div>
+                  <div className="h-4 w-1/3 bg-secondary"></div>
                 </div>
               </div>
             ))}
           </div>
         ) : error ? (
-          <div className="p-8 text-center text-red-600">
+          <div className="p-8 text-center text-destructive font-sans">
             Error fetching products: {error}
           </div>
         ) : products.length === 0 ? (
-          <div className="mx-auto max-w-xl px-6 py-16 text-center">
-            <h3 className="mb-3 text-lg font-medium text-[#121212]">
+          <div className="mx-auto max-w-xl px-6 py-24 text-center">
+            <h3 className="mb-4 text-xl font-serif text-foreground tracking-widest">
               {emptyStateMessage}
             </h3>
-            <p className="mb-6 text-sm text-gray-500">
+            <p className="mb-8 text-sm font-sans tracking-wide text-muted-foreground">
               Try clearing a filter, widening the price range, or searching with
               fewer terms.
             </p>
@@ -472,16 +475,16 @@ function CatalogListingPage({
                   sort: defaultSort,
                 })
               }
-              className="rounded-full bg-black px-5 py-3 text-[12px] font-[Karla] tracking-widest text-white"
+              className="border border-foreground bg-foreground px-8 py-3 text-xs font-sans tracking-[0.2em] text-background hover:bg-transparent hover:text-foreground transition-colors duration-500"
             >
               RESET FILTERS
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 p-[20px] md:grid-cols-4">
-            {products.map((product) => (
+          <div className="grid grid-cols-2 gap-8 px-8 md:grid-cols-4 md:gap-12">
+            {products.map((product, idx) => (
               <Link to={`/products/${product.slug}`} key={product._id}>
-                <ProductCard product={product} />
+                <ProductCard product={product} index={idx} />
               </Link>
             ))}
           </div>

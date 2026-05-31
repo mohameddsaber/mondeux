@@ -47,53 +47,36 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        duration: 0.5,
+        duration: 0.8,
         delay: index * 0.1,
-        ease: "easeOut"
+        ease: [0.25, 0.1, 0.25, 1] // Slow ease out
       }}
-      whileHover={{ y: -8 }}
-      className="group cursor-pointer"
+      className="group cursor-pointer flex flex-col gap-4"
     >
-      {/* Image */}
-      <motion.div 
-        className="bg-gray-100 aspect-square mb-4 overflow-hidden rounded relative"
-        whileHover={{ scale: 1.02 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="absolute right-3 top-3 z-10">
+      {/* Image Container */}
+      <div className="bg-secondary aspect-[4/5] overflow-hidden relative">
+        <div className="absolute right-4 top-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
           <WishlistButton productId={product._id} />
         </div>
-        <motion.img
+        <img
           src={product.images[0].url}
           alt={product.name}
-          className="w-full h-full object-cover"
-          whileHover={{ scale: 1.1 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105"
         />
-      </motion.div>
+      </div>
 
-      {/* Name */}
-      <motion.h3 
-        className="font-medium text-sm mb-1 uppercase"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: index * 0.1 + 0.2 }}
-      >
-        {product.name}
-      </motion.h3>
-
-      {/* Price */}
-      <motion.p 
-        className="text-sm text-gray-600"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: index * 0.1 + 0.3 }}
-      >
-        {formatProductPriceRange(product)}
-      </motion.p>
+      {/* Details */}
+      <div className="flex flex-col items-center text-center gap-2">
+        <h3 className="font-serif font-medium text-lg text-foreground tracking-wide">
+          {product.name}
+        </h3>
+        <p className="text-sm font-sans text-muted-foreground tracking-wider">
+          {formatProductPriceRange(product)}
+        </p>
+      </div>
     </motion.div>
   );
 };
