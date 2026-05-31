@@ -10,9 +10,24 @@ export const computeProductDerivedFields = (variants = []) => {
       priceValues.push(price);
     }
 
-    const stock = Number(variant?.stock);
-    if (Number.isFinite(stock) && stock > 0) {
-      totalStock += stock;
+    let variantStock = 0;
+
+    if (Array.isArray(variant?.sizeVariants) && variant.sizeVariants.length > 0) {
+      for (const size of variant.sizeVariants) {
+        const sizeStock = Number(size?.stock);
+        if (Number.isFinite(sizeStock) && sizeStock > 0) {
+          variantStock += sizeStock;
+        }
+      }
+    } else {
+      const stock = Number(variant?.stock);
+      if (Number.isFinite(stock) && stock > 0) {
+        variantStock = stock;
+      }
+    }
+
+    if (variantStock > 0) {
+      totalStock += variantStock;
       if (variant?.attribute?.value) {
         availableAttributes.add(variant.attribute.value);
       }

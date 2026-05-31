@@ -130,5 +130,47 @@ productSchema.pre('findOneAndUpdate', function(next) {
   next();
 });
 
+productSchema.post('findOneAndUpdate', async function(doc) {
+  if (!doc) return;
+
+  const update = this.getUpdate() || {};
+  const setPaths = Object.keys(update.$set || {});
+  const updatePaths = Object.keys(update);
+  
+  const hasPositionalVariantUpdate = 
+    setPaths.some(path => path.startsWith('variants.')) ||
+    updatePaths.some(path => path.startsWith('variants.'));
+
+  const hasRootVariantUpdate = !!(update.variants || update.$set?.variants);
+
+  if (hasPositionalVariantUpdate && !hasRootVariantUpdate) {
+    const ProductModel = this.model;
+    const updatedDoc = await ProductModel.findById(doc._id);
+    if (!updatedDoc) return;
+
+    const derivedFields = computeProductDerivedFields(updatedDoc.variants);
+    
+    const currentAttrs = updatedDoc.availableAttributes || [];
+    const newAttrs = derivedFields.availableAttributes || [];
+    const attrsChanged = 
+      currentAttrs.length !== newAttrs.length || 
+      !currentAttrs.every(a => newAttrs.includes(a));
+    
+    if (
+      updatedDoc.totalStock !== derivedFields.totalStock ||
+      updatedDoc.minVariantPrice !== derivedFields.minVariantPrice ||
+      attrsChanged
+    ) {
+      await ProductModel.updateOne({ _id: doc._id }, {
+        $set: {
+          minVariantPrice: derivedFields.minVariantPrice,
+          totalStock: derivedFields.totalStock,
+          availableAttributes: derivedFields.availableAttributes
+        }
+      });
+    }
+  }
+});
+
 const Product = mongoose.model('Product', productSchema);
 export default Product;
