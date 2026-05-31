@@ -13,59 +13,21 @@ import {
   useCurrentUserQuery,
   useProductDetailQuery,
   useProductReviewsQuery,
+  type ProductDetails,
 } from '../hooks/useStoreData';
 import { trackClientEvent } from '../lib/analytics';
 import { toast } from 'sonner';
 
-
-export interface SizeVariant {
-  label: string; 
-  sku: string;
-  stock: number;
-  price?: number; 
-  isAvailable: boolean;
-}
-
-export interface MaterialVariant {
-  material: "gold" | "silver" | "stainless steel";
-  metalPurity?: string;
-  weight?: number;
-  price: number;
-  compareAtPrice?: number;
-  costPrice?: number;
-  stock: number;
-  sizeVariants: SizeVariant[];
-}
-
-export interface ProductDetails {
-  _id: string;
-  name: string;
-  slug: string;
-  description: string;
-  metaDescription?: string; 
-  images: { url: string; alt: string; isPrimary: boolean }[];
-  category: { name: string; slug: string } | null; 
-  subCategory: { name: string; slug: string } | null;
-  materialVariants: MaterialVariant[];
-  tags: string[];
-  isActive: boolean;
-  isFeatured: boolean;
-  rating: number;
-  numReviews: number;
-  createdAt: string;
-}
-
-
 const ProductItemPage: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>(); 
-  const navigate = useNavigate(); 
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
 
   const [error, setError] = useState<string | null>(null);
 
-  // 🎯 FIX: Changed to store the material name string
-  const [selectedMaterialName, setSelectedMaterialName] = useState<string | null>(null);
-  const [selectedSize, setSelectedSize] = useState<SizeVariant | null>(null);
-  
+  // 🎯 FIX: Changed to store the variant attribute value string
+  const [selectedVariantValue, setSelectedVariantValue] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<any | null>(null);
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
@@ -75,7 +37,7 @@ const ProductItemPage: React.FC = () => {
   const addToCartMutation = useAddToCartMutation();
   const trackedProductViewRef = useRef("");
   const currentUserQuery = useCurrentUserQuery();
-  
+
   const productQuery = useProductDetailQuery(slug || "");
   const product = (productQuery.data?.data as ProductDetails | undefined) ?? null;
   const relatedProducts = productQuery.data?.relatedProducts || [];
@@ -94,7 +56,7 @@ const ProductItemPage: React.FC = () => {
 
   useEffect(() => {
     if (!product) {
-      setSelectedMaterialName(null);
+      setSelectedVariantValue(null);
       setSelectedSize(null);
       setReviewRating(5);
       setReviewTitle('');
@@ -102,17 +64,17 @@ const ProductItemPage: React.FC = () => {
       return;
     }
 
-    if (product.materialVariants.length === 0) {
+    if (!product.variants || product.variants.length === 0) {
       return;
     }
 
-    const initialMaterial = product.materialVariants[0];
-    setSelectedMaterialName(initialMaterial.material);
+    const initialVariant = product.variants[0];
+    setSelectedVariantValue(initialVariant.attribute.value);
 
-    if (initialMaterial.sizeVariants.length > 0) {
+    if (initialVariant.sizeVariants.length > 0) {
       const initialSize =
-        initialMaterial.sizeVariants.find((s) => s.isAvailable && s.stock > 0) ||
-        initialMaterial.sizeVariants[0];
+        initialVariant.sizeVariants.find((s) => s.isAvailable && s.stock > 0) ||
+        initialVariant.sizeVariants[0];
       setSelectedSize(initialSize);
     }
   }, [product]);
@@ -140,72 +102,72 @@ const ProductItemPage: React.FC = () => {
   }, [product]);
 
 
-  const selectedMaterial = product?.materialVariants.find(
-    v => v.material === selectedMaterialName
+  const selectedVariant = product?.variants?.find(
+    v => v.attribute.value === selectedVariantValue
   ) || null;
 
 
-  const finalPrice = selectedSize?.price ?? selectedMaterial?.price ?? product?.materialVariants[0]?.price ?? 0;
-  const displayPrice = finalPrice; 
+  const finalPrice = selectedSize?.price ?? selectedVariant?.price ?? product?.variants?.[0]?.price ?? 0;
+  const displayPrice = finalPrice;
   const isAvailable = selectedSize ? selectedSize.stock > 0 : false;
   const imageUrls = product?.images.map(img => img.url) || [];
 
-  const selectedVariantLabel = selectedSize?.label 
-    ? `${(selectedMaterialName || '').toUpperCase()} - ${selectedSize.label}`
-    : (selectedMaterialName || '').toUpperCase() || 'Select Variant';
+  const selectedVariantLabel = selectedSize?.label
+    ? `${(selectedVariantValue || '').toUpperCase()} - ${selectedSize.label}`
+    : (selectedVariantValue || '').toUpperCase() || 'Select Variant';
 
 
-    const currentSizeOptions = selectedMaterial?.sizeVariants.map(s => ({
-      id: `${selectedMaterial.material}-${s.sku}`,
-      label: s.label,
-      material: selectedMaterial,
-      size: s,
-      isAvailable: s.isAvailable && s.stock > 0
+  const currentSizeOptions = selectedVariant?.sizeVariants.map(s => ({
+    id: `${selectedVariant.attribute.value}-${s.sku}`,
+    label: s.label,
+    variant: selectedVariant,
+    size: s,
+    isAvailable: s.isAvailable && s.stock > 0
   })) || [];
 
 
-  const handleMaterialSelect = (materialName: string) => {
-    setSelectedMaterialName(materialName); 
-    
-    const newMaterialVariant = product?.materialVariants.find(v => v.material === materialName);
+  const handleMaterialSelect = (variantValue: string) => {
+    setSelectedVariantValue(variantValue);
 
-    if (newMaterialVariant) {
+    const newVariant = product?.variants?.find(v => v.attribute.value === variantValue);
 
-      const initialSize = newMaterialVariant.sizeVariants.find(s => s.isAvailable && s.stock > 0) || newMaterialVariant.sizeVariants[0];
-        setSelectedSize(initialSize);
+    if (newVariant) {
 
-        setIsDropdownOpen(false);
+      const initialSize = newVariant.sizeVariants.find(s => s.isAvailable && s.stock > 0) || newVariant.sizeVariants[0];
+      setSelectedSize(initialSize);
+
+      setIsDropdownOpen(false);
     }
   };
 
 
   const handleAddToCart = async () => {
 
-    if (!product || !selectedMaterial || !selectedSize || finalPrice <= 0 || !isAvailable) {
+    if (!product || !selectedVariant || !selectedSize || finalPrice <= 0 || !isAvailable) {
       console.error("Cannot add to cart: Missing required variant information or item is unavailable.");
 
       setError("Please ensure you have selected an available variant.");
       return;
     }
-    
-    setAddedToCart(true); 
+
+    setAddedToCart(true);
 
     try {
 
       const payload = {
-        productId: product._id, 
-        size: selectedSize.label, 
-        material: selectedMaterial.material,
-        price: finalPrice, 
-        quantity: quantity, 
+        productId: product._id,
+        size: selectedSize.label,
+        material: selectedVariant.attribute.value,
+        price: finalPrice,
+        quantity: quantity,
       };
 
-      await addToCartMutation.mutateAsync(payload); 
+      await addToCartMutation.mutateAsync(payload);
 
 
       setTimeout(() => {
         setAddedToCart(false);
-      }, 3000); 
+      }, 3000);
 
     } catch (error) {
       console.error("Failed to add item to cart:", error);
@@ -236,17 +198,17 @@ const ProductItemPage: React.FC = () => {
   };
 
 
-  const getProductDetails = (product: ProductDetails, material: MaterialVariant | null): string[] => {
+  const getProductDetails = (product: ProductDetails, variant: any): string[] => {
 
-    if (!product || !material) return [];
+    if (!product || !variant) return [];
 
     const detailsArray: string[] = [];
 
     const materialLine = [];
-    if (material.metalPurity) {
-        materialLine.push(material.metalPurity);
+    if (variant.attribute.meta) {
+      materialLine.push(variant.attribute.meta);
     }
-    materialLine.push(material.material.charAt(0).toUpperCase() + material.material.slice(1));
+    materialLine.push(variant.attribute.value.charAt(0).toUpperCase() + variant.attribute.value.slice(1));
     detailsArray.push(materialLine.join(' '));
 
 
@@ -255,33 +217,33 @@ const ProductItemPage: React.FC = () => {
 
 
       const featureLine = descriptionToUse.split(/[.!?]/)[0].trim();
-        if (featureLine.length > 0) {
-            detailsArray.push(featureLine);
-        }
+      if (featureLine.length > 0) {
+        detailsArray.push(featureLine);
+      }
     }
 
     detailsArray.push("Mondeux branding");
     detailsArray.push("Hallmarked by the Mondeux' Company Assay Office");
 
 
-    if (material.sizeVariants.length > 0) {
+    if (variant.sizeVariants.length > 0) {
 
-      const uniqueSizes = material.sizeVariants
-            .map(v => v.label)
-            .filter((value, index, self) => self.indexOf(value) === index);
-        
-        detailsArray.push(`Available in ${uniqueSizes.join(', ')}`);
+      const uniqueSizes = variant.sizeVariants
+        .map((v: any) => v.label)
+        .filter((value: string, index: number, self: string[]) => self.indexOf(value) === index);
+
+      detailsArray.push(`Available in ${uniqueSizes.join(', ')}`);
     }
 
 
-    if (material.weight) {
-        detailsArray.push(`This product weighs ${material.weight}g`);
+    if (product.extraAttributes?.weight) {
+      detailsArray.push(`This product weighs ${product.extraAttributes.weight}`);
     }
-    
+
     return detailsArray;
   };
 
-  const details = product ? getProductDetails(product, selectedMaterial) : [];
+  const details = product ? getProductDetails(product, selectedVariant) : [];
 
   if (!slug) {
     return (
@@ -312,7 +274,7 @@ const ProductItemPage: React.FC = () => {
     );
   }
 
-  if ((queryError || error || !product) && !addedToCart) { 
+  if ((queryError || error || !product) && !addedToCart) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center ">
         <div className="text-center">
@@ -335,11 +297,11 @@ const ProductItemPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 ">
-      <main className="max-w-9xl mx-auto"> 
+      <main className="max-w-9xl mx-auto">
         <div className="grid md:grid-cols-2 gap-10">
           {/* Product Image */}
           <div>
-            <ProductImageSlider images={imageUrls} /> 
+            <ProductImageSlider images={imageUrls} />
             <div className='md:block hidden pl-4'><TrustBadges /></div>
           </div>
 
@@ -361,25 +323,24 @@ const ProductItemPage: React.FC = () => {
               ))}
             </div>
 
-            <div className="max-w-lg w-full"> 
-              
-              {/* 🎯 New Material Selector UI */}
+            <div className="max-w-lg w-full">
+
+              {/* 🎯 New Variant Selector UI */}
               <div className="mb-4">
-                <p className="text-sm font-semibold mb-2">Material: <span className="font-normal">{selectedMaterialName?.toUpperCase() || ''}</span></p>
+                <p className="text-sm font-semibold mb-2">Variant: <span className="font-normal">{selectedVariantValue?.toUpperCase() || ''}</span></p>
                 <div className="flex gap-2 mb-4">
-                  {product?.materialVariants.map(variant => (
+                  {product?.variants?.map(variant => (
                     <button
-                      key={variant.material}
-                      onClick={() => handleMaterialSelect(variant.material)}
+                      key={variant.attribute.value}
+                      onClick={() => handleMaterialSelect(variant.attribute.value)}
                       className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 border-2 
-                        ${
-                          variant.material === selectedMaterialName
-                            ? "bg-black text-white border-black shadow-md"
-                            : "bg-white text-gray-700 border-gray-300 hover:border-gray-500"
+                        ${variant.attribute.value === selectedVariantValue
+                          ? "bg-black text-white border-black shadow-md"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-gray-500"
                         }`
                       }
                     >
-                      {variant.material.charAt(0).toUpperCase() + variant.material.slice(1)}
+                      {variant.attribute.value.charAt(0).toUpperCase() + variant.attribute.value.slice(1)}
                     </button>
                   ))}
                 </div>
@@ -394,10 +355,10 @@ const ProductItemPage: React.FC = () => {
                       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                       className="w-full px-4 py-3 border border-gray-300 rounded bg-white text-left flex items-center justify-between hover:border-gray-400 transition-colors"
                     >
-                      <span>{selectedVariantLabel}</span> 
+                      <span>{selectedVariantLabel}</span>
                       <ChevronDown size={20} className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
-                    
+
                     {isDropdownOpen && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
                         {/* Now maps over currentSizeOptions */}
@@ -410,11 +371,10 @@ const ProductItemPage: React.FC = () => {
                               setIsDropdownOpen(false);
                             }}
                             disabled={!option.isAvailable}
-                            className={`w-full px-4 py-3 text-left transition-colors ${
-                              (selectedSize?.label === option.size.label)
-                                ? 'bg-gray-100 font-semibold' 
-                                : 'hover:bg-gray-50'
-                            } ${!option.isAvailable ? 'text-gray-400 cursor-not-allowed' : ''}`}
+                            className={`w-full px-4 py-3 text-left transition-colors ${(selectedSize?.label === option.size.label)
+                              ? 'bg-gray-100 font-semibold'
+                              : 'hover:bg-gray-50'
+                              } ${!option.isAvailable ? 'text-gray-400 cursor-not-allowed' : ''}`}
                           >
                             {/* Display only the size label */}
                             {option.label}
@@ -424,7 +384,7 @@ const ProductItemPage: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   <button className="text-sm underline whitespace-nowrap hover:text-gray-600">
                     Size Guide
                   </button>
@@ -432,16 +392,15 @@ const ProductItemPage: React.FC = () => {
               </div>
 
               {/* Add to Cart Button (Updated onClick logic) */}
-              <button 
+              <button
                 onClick={handleAddToCart}
                 disabled={!selectedSize || !isAvailable || addedToCart}
-                className={`w-full py-3 border text-[12px] transition-all mb-3 ${
-                  addedToCart 
-                    ? 'bg-green-600 text-white border-green-600' 
-                    : isAvailable 
-                        ? 'bg-white border-black text-black hover:bg-black hover:text-white'
-                        : 'bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                className={`w-full py-3 border text-[12px] transition-all mb-3 ${addedToCart
+                  ? 'bg-green-600 text-white border-green-600'
+                  : isAvailable
+                    ? 'bg-white border-black text-black hover:bg-black hover:text-white'
+                    : 'bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
               >
                 {!selectedSize ? 'SELECT VARIANT' : (isAvailable ? (addedToCart ? 'ADDED TO CART ✓' : 'ADD TO CART') : 'SOLD OUT')}
               </button>
@@ -469,7 +428,7 @@ const ProductItemPage: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className='md:hidden block px-8'><TrustBadges /></div>
         <section className="mx-auto mt-16 max-w-7xl px-6 pb-8">
           <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
@@ -484,11 +443,10 @@ const ProductItemPage: React.FC = () => {
                     {[1, 2, 3, 4, 5].map((value) => (
                       <Star
                         key={value}
-                        className={`h-4 w-4 ${
-                          value <= Math.round(reviewStats.averageRating || 0)
-                            ? 'fill-black text-black'
-                            : 'text-gray-300'
-                        }`}
+                        className={`h-4 w-4 ${value <= Math.round(reviewStats.averageRating || 0)
+                          ? 'fill-black text-black'
+                          : 'text-gray-300'
+                          }`}
                       />
                     ))}
                   </div>
@@ -528,11 +486,10 @@ const ProductItemPage: React.FC = () => {
                           className="transition"
                         >
                           <Star
-                            className={`h-6 w-6 ${
-                              value <= reviewRating
-                                ? 'fill-black text-black'
-                                : 'text-gray-300'
-                            }`}
+                            className={`h-6 w-6 ${value <= reviewRating
+                              ? 'fill-black text-black'
+                              : 'text-gray-300'
+                              }`}
                           />
                         </button>
                       ))}
@@ -591,11 +548,10 @@ const ProductItemPage: React.FC = () => {
                             {[1, 2, 3, 4, 5].map((value) => (
                               <Star
                                 key={value}
-                                className={`h-4 w-4 ${
-                                  value <= review.rating
-                                    ? 'fill-black text-black'
-                                    : 'text-gray-300'
-                                }`}
+                                className={`h-4 w-4 ${value <= review.rating
+                                  ? 'fill-black text-black'
+                                  : 'text-gray-300'
+                                  }`}
                               />
                             ))}
                           </div>

@@ -46,7 +46,7 @@ interface OrderItem {
     };
     name: string;
     size: string;
-    material: string;
+    selectedAttribute?: { type: string; value: string };
     quantity: number;
     price: number;
     image: string;
@@ -176,7 +176,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose })
                                     </div>
                                     <div className="flex-1">
                                         <p className="font-semibold text-gray-900">{item.name}</p>
-                                        <p className="text-xs text-gray-600">Variant: {item.material} / {item.size}</p>
+                                        <p className="text-xs text-gray-600">Variant: {item.selectedAttribute?.value} / {item.size}</p>
                                         <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
                                     </div>
                                     <div className="text-right font-bold text-sm">

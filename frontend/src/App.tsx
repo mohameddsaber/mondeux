@@ -15,7 +15,7 @@ import OrderHistoryPage from "./pages/OrderHistoryPage";
 import WishlistPage from "./pages/WishlistPage";
 import LoyaltyScheme from "./pages/LoyalityScheme";
 import LoyaltySchemeNoAuth from "./pages/LoyaltySchemeNoAuth";
-import { Award} from "lucide-react";
+import { Award } from "lucide-react";
 import Dashboard from "./pages/Admin/Dashboard";
 import Users from "./pages/Admin/Users";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
@@ -30,14 +30,14 @@ import HeaderAdmin from "./components/HeaderAdmin";
 import { useCurrentUserQuery } from "./hooks/useStoreData";
 
 const CategoryPageWrapper = () => {
-    const { categorySlug } = useParams<{ categorySlug: string }>();
-    if (!categorySlug) return <div>Error: Category not specified.</div>;
-    return <CategoryPage categorySlug={categorySlug} />;
+  const { categorySlug } = useParams<{ categorySlug: string }>();
+  if (!categorySlug) return <div>Error: Category not specified.</div>;
+  return <CategoryPage categorySlug={categorySlug} />;
 }
 const SubCategoryPageWrapper = () => {
-    const { subCategorySlug } = useParams<{ subCategorySlug: string }>();
-    if (!subCategorySlug) return <div>Error: SubCategory not specified.</div>;
-    return <SubCategoryPage subCategorySlug={subCategorySlug} />;
+  const { subCategorySlug } = useParams<{ subCategorySlug: string }>();
+  if (!subCategorySlug) return <div>Error: SubCategory not specified.</div>;
+  return <SubCategoryPage subCategorySlug={subCategorySlug} />;
 }
 function App() {
   const navigate = useNavigate();
@@ -60,109 +60,109 @@ function App() {
   return (
     <>
       {/* Header */}
-   {isAdmin  ? (
-      <>
-      <div className="fixed top-0 left-0 right-0 z-50">
-        <HeaderAdmin />
-      </div>
-      <div className="md:hidden h-[110px] bg-[#f4f4f5]"></div>
-      </>
-    ) : isCheckingAdmin ? null : (
-      <>
-        <div className="hidden md:block fixed top-0 left-0 right-0 z-50">
-          <Header />
+      {isAdmin ? (
+        <>
+          <div className="fixed top-0 left-0 right-0 z-50">
+            <HeaderAdmin />
+          </div>
+          <div className="md:hidden h-[110px] bg-[#f4f4f5]"></div>
+        </>
+      ) : isCheckingAdmin ? null : (
+        <>
+          <div className="hidden md:block fixed top-0 left-0 right-0 z-50">
+            <Header />
 
-        </div>
-        <div className="md:hidden fixed top-0 left-0 right-0 z-50">
-          <NavBar />
-        </div>
-        <div className="md:hidden h-[76px] bg-[#f4f4f5]"></div>
-      </>
-    )}
-      <div className="hidden md:block h-[140px] bg-[#f4f4f5]"></div>
+          </div>
+          <div className="md:hidden fixed top-0 left-0 right-0 z-50">
+            <NavBar />
+          </div>
+          <div className="md:hidden h-[76px] bg-[#f4f4f5]"></div>
+        </>
+      )}
+      <div className="hidden md:block h-[130px] bg-[#f4f4f5]"></div>
 
       {/* Routes */}
-          <Routes>
-            {/* User-facing routes */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
-            <Route path="/products" element={<ProductsPage />} />
-            <Route path="/category/:categorySlug" element={<CategoryPageWrapper />} />
-            <Route path="/subcategory/:subCategorySlug" element={<SubCategoryPageWrapper />} />
-            <Route path="/products/:slug" element={<ProductItemPage />} />
-            <Route path="/my-orders" element={<OrderHistoryPage />} />
-            <Route path="/wishlist" element={<WishlistPage />} />
+      <Routes>
+        {/* User-facing routes */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/cart" element={<CartPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
+        <Route path="/products" element={<ProductsPage />} />
+        <Route path="/category/:categorySlug" element={<CategoryPageWrapper />} />
+        <Route path="/subcategory/:subCategorySlug" element={<SubCategoryPageWrapper />} />
+        <Route path="/products/:slug" element={<ProductItemPage />} />
+        <Route path="/my-orders" element={<OrderHistoryPage />} />
+        <Route path="/wishlist" element={<WishlistPage />} />
 
-            {/* Admin Routes */}
+        {/* Admin Routes */}
 
-            <Route 
-              path="/admin" 
-              element={
-                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
-                  <Navigate to="/admin/dashboard" />
-                </ProtectedAdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/dashboard" 
-              element={
-                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
-                  <Dashboard />
-                </ProtectedAdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/users" 
-              element={
-                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
-                  <Users />
-                </ProtectedAdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/orders" 
-              element={
-                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
-                  <OrderPage />
-                </ProtectedAdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/products" 
-              element={
-                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
-                  <ProductPage />
-                </ProtectedAdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/categories" 
-              element={
-                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
-                  <CategoriesPageAdmin />
-                </ProtectedAdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/reviews" 
-              element={
-                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
-                  <ReviewsPage />
-                </ProtectedAdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/promotions" 
-              element={
-                <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
-                  <PromotionsPage />
-                </ProtectedAdminRoute>
-              } 
-            />
-          </Routes>
+        <Route
+          path="/admin"
+          element={
+            <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+              <Navigate to="/admin/dashboard" />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+              <Dashboard />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+              <Users />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin/orders"
+          element={
+            <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+              <OrderPage />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin/products"
+          element={
+            <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+              <ProductPage />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin/categories"
+          element={
+            <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+              <CategoriesPageAdmin />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin/reviews"
+          element={
+            <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+              <ReviewsPage />
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin/promotions"
+          element={
+            <ProtectedAdminRoute isAdmin={isAdmin} isCheckingAdmin={isCheckingAdmin}>
+              <PromotionsPage />
+            </ProtectedAdminRoute>
+          }
+        />
+      </Routes>
 
 
       {/* Loyalty Scheme Button */}
@@ -183,11 +183,11 @@ function App() {
       {/* Loyalty Scheme Modal */}
       {isAuthenticated && <LoyaltyScheme
         isOpen={isLoyaltyOpen}
-        setIsOpen={setIsLoyaltyOpen}        
+        setIsOpen={setIsLoyaltyOpen}
       />}
       {!isAuthenticated && <LoyaltySchemeNoAuth
         isOpen={isLoyaltyOpen}
-        setIsOpen={setIsLoyaltyOpen}        
+        setIsOpen={setIsLoyaltyOpen}
       />}
       < TestimonialsSection />
       <Footer />

@@ -14,10 +14,8 @@ interface SizeVariant {
   isAvailable: boolean;
 }
 
-interface MaterialVariant {
-  material: "gold" | "silver" | "stainless steel";
-  metalPurity?: string;
-  weight?: number;
+interface Variant {
+  attribute: { type: string; value: string; meta?: string };
   price: number;
   compareAtPrice?: number;
   costPrice?: number;
@@ -33,7 +31,7 @@ interface Product {
   images: { url: string; alt: string; isPrimary: boolean }[];
   category: string;
   subCategory: string;
-  materialVariants: MaterialVariant[];
+  variants: Variant[];
   tags: string[];
   isActive: boolean;
   isFeatured: boolean;

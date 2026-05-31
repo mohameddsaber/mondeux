@@ -101,10 +101,11 @@ export interface ProductDetails {
   images: { url: string; alt: string; isPrimary: boolean }[];
   category: { name: string; slug: string } | null;
   subCategory: { name: string; slug: string } | null;
-  materialVariants: {
-    material: "gold" | "silver" | "stainless steel";
-    metalPurity?: string;
-    weight?: number;
+  productType?: string;
+  gender?: string;
+  extraAttributes?: Record<string, string>;
+  variants: {
+    attribute: { type: string; value: string; meta?: string };
     price: number;
     compareAtPrice?: number;
     costPrice?: number;
@@ -207,7 +208,7 @@ export interface OrderItem {
   };
   name: string;
   size: string;
-  material: string;
+  selectedAttribute?: { type: string; value: string };
   quantity: number;
   price: number;
   image: string;
@@ -502,7 +503,7 @@ export interface CartItem {
   productId: string;
   name: string;
   size: string;
-  material: string;
+  selectedAttribute?: { type: string; value: string };
   price: number;
   quantity: number;
   image: string;
@@ -515,7 +516,7 @@ interface ServerCartItem {
     images?: Array<{ url?: string }>;
   };
   size?: string;
-  material?: string;
+  selectedAttribute?: { type: string; value: string };
   price: number;
   quantity: number;
 }
@@ -535,7 +536,7 @@ export interface WishlistItem {
   rating: number;
   category: { name: string; slug: string } | null;
   subCategory: { name: string; slug: string } | null;
-  materialVariants: ProductDetails["materialVariants"];
+  variants: ProductDetails["variants"];
   minVariantPrice: number;
   totalStock: number;
   lowStockThreshold: number;
@@ -560,7 +561,7 @@ const createOptimisticWishlistItem = (productId: string): WishlistItem => ({
   rating: 0,
   category: null,
   subCategory: null,
-  materialVariants: [],
+  variants: [],
   minVariantPrice: 0,
   totalStock: 0,
   lowStockThreshold: 0,
@@ -736,7 +737,7 @@ const mapServerCartToClientCart = (
       item.product.images?.[0]?.url ||
       "https://placehold.co/100x100/A0A0A0/ffffff?text=No+Image",
     size: item.size || "N/A",
-    material: item.material || "N/A",
+    selectedAttribute: item.selectedAttribute,
     price: item.price,
     quantity: item.quantity,
   }));

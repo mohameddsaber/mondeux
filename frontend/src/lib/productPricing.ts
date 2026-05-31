@@ -3,6 +3,9 @@ type ProductPricingShape = {
   materialVariants?: Array<{
     price?: number;
   }>;
+  variants?: Array<{
+    price?: number;
+  }>;
 };
 
 const formatLe = (amount: number) =>
@@ -12,7 +15,8 @@ const formatLe = (amount: number) =>
   })} LE`;
 
 export const getProductPriceBounds = (product: ProductPricingShape) => {
-  const prices = (product.materialVariants || [])
+  const variants = product.variants || product.materialVariants || [];
+  const prices = variants
     .map((variant) => Number(variant?.price || 0))
     .filter((price) => price > 0);
 

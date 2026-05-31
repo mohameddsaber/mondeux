@@ -35,7 +35,7 @@ export default function ShoppingCartPanel({
     updateQuantityMutation.mutate({
       productId: item.productId,
       size: item.size,
-      material: item.material,
+      material: item.selectedAttribute?.value || '',
       delta,
     });
   };
@@ -80,7 +80,7 @@ export default function ShoppingCartPanel({
               </div>
             ) : (
               items.map((item) => (
-                <div key={`${item.productId}-${item.size}-${item.material}`} className="flex items-start">
+                <div key={`${item.productId}-${item.size}-${item.selectedAttribute?.value}`} className="flex items-start">
                   {/* Item Image */}
                   <img
                     src={item.image}
@@ -92,7 +92,7 @@ export default function ShoppingCartPanel({
                   <div className="flex-grow">
                     <h3 className="text-sm font-semibold">{item.name}</h3>
                     <p className="text-xs text-gray-500 mt-0.5">Size: {item.size}</p>
-                    <p className="text-xs text-gray-500">Material: {item.material}</p>
+                    <p className="text-xs text-gray-500">Variant: {item.selectedAttribute?.value}</p>
                     <p className="font-medium text-sm mt-1">LE {item.price.toFixed(2)}</p>
 
                     {/* Quantity Selector and Remove */}
@@ -117,7 +117,7 @@ export default function ShoppingCartPanel({
                       </div>
 
                       <button 
-                          onClick={() => handleRemoveItem(item.productId, item.size, item.material)}
+                          onClick={() => handleRemoveItem(item.productId, item.size, item.selectedAttribute?.value || '')}
                           className="text-xs text-red-600 hover:text-red-800 transition-colors underline"
                       >
                          Remove

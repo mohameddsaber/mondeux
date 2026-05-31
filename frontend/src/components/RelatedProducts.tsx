@@ -9,7 +9,7 @@ interface MinimalProduct {
     images: { url: string; alt: string; isPrimary: boolean }[];
     rating?: number;
     minVariantPrice?: number;
-    materialVariants?: Array<{ price?: number }>;
+    variants?: Array<{ price?: number }>;
 }
 
 interface RelatedProductsProps {
